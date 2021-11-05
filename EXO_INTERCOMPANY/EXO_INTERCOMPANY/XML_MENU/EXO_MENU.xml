@@ -1,0 +1,8 @@
+﻿<Application>
+  <Menus>
+    <action type="add">
+      <Menu Checked="0" Enabled="1" FatherUID="3328" Image="" String="EXO - Intercompany" Type="2" UniqueID="EXO-MnEIn"></Menu>
+      <Menu Checked="0" Enabled="1" FatherUID="EXO-MnEIn" Image="" String="Parametrización" Type="1" UniqueID="EXO-MnPA"></Menu>
+    </action>
+  </Menus>
+</Application>
