@@ -1,6 +1,6 @@
 ﻿Public Class EXO_CONEXIONES
 #Region "Connect to Company"
-    Public Shared Sub Connect_Company_Destino(ByRef oCompanyDes As SAPbobsCOM.Company, ByRef oObjGlobal As EXO_UIAPI.EXO_UIAPI, ByRef sUser As String, ByRef sPass As String, ByVal sBBDD As String)
+    Public Shared Sub Connect_Company(ByRef oCompanyDes As SAPbobsCOM.Company, ByRef oObjGlobal As EXO_UIAPI.EXO_UIAPI, ByRef sUser As String, ByRef sPass As String, ByVal sBBDD As String)
 
         Try
             'Conectar DI SAP
@@ -11,15 +11,14 @@
             oCompanyDes.UserName = sUser
             oCompanyDes.Password = sPass
             oCompanyDes.UseTrusted = False
-            oCompanyDes.DbPassword = oObjGlobal.refDi.compañia.DbPassword
-            oCompanyDes.DbUserName = oObjGlobal.refDi.compañia.DbUserName
+            oCompanyDes.DbPassword = oObjGlobal.refDi.SQL.claveSQL
+            oCompanyDes.DbUserName = oObjGlobal.refDi.SQL.usuarioSQL
             oCompanyDes.DbServerType = SAPbobsCOM.BoDataServerTypes.dst_HANADB
             ' oCompany.SLDServer = oCompOrigen.SLDServer
             oCompanyDes.CompanyDB = sBBDD
             'oLog.escribeMensaje("database:" & oCompany.CompanyDB, EXO_Log.EXO_Log.Tipo.advertencia)
             If oCompanyDes.Connect <> 0 Then
                 Throw New System.Exception("Error en la conexión a la compañia:" & oCompanyDes.GetLastErrorDescription.Trim)
-
             End If
 
 

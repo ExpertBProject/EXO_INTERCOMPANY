@@ -1,35 +1,39 @@
 ﻿Imports System.Xml
 Imports SAPbouiCOM
-Public Class OCRD
+Public Class EXO_ONNM
     Inherits EXO_UIAPI.EXO_DLLBase
+
     Public Sub New(ByRef oObjGlobal As EXO_UIAPI.EXO_UIAPI, ByRef actualizar As Boolean, usaLicencia As Boolean, idAddOn As Integer)
         MyBase.New(oObjGlobal, actualizar, False, idAddOn)
 
     End Sub
+
     Public Overrides Function filtros() As EventFilters
         Dim filtrosXML As Xml.XmlDocument = New Xml.XmlDocument
-        filtrosXML.LoadXml(objGlobal.funciones.leerEmbebido(Me.GetType(), "XML_FILTROS.xml"))
+        filtrosXML.LoadXml(objGlobal.funciones.leerEmbebido(Me.GetType(), "XML_FILTROS_INTERCOMPANY.xml"))
         Dim filtro As SAPbouiCOM.EventFilters = New SAPbouiCOM.EventFilters()
         filtro.LoadFromXML(filtrosXML.OuterXml)
 
         Return filtro
     End Function
-
     Public Overrides Function menus() As XmlDocument
         Return Nothing
     End Function
+
     Public Overrides Function SBOApp_ItemEvent(infoEvento As ItemEvent) As Boolean
         Try
             If infoEvento.InnerEvent = False Then
                 If infoEvento.BeforeAction = False Then
                     Select Case infoEvento.FormTypeEx
-                        Case "134"
+                        Case "172"
                             Select Case infoEvento.EventType
                                 Case SAPbouiCOM.BoEventTypes.et_COMBO_SELECT
 
                                 Case SAPbouiCOM.BoEventTypes.et_ITEM_PRESSED
-                                    If EventHandler_ItemPressed_After(infoEvento) = False Then
-                                        Return False
+                                    If infoEvento.ActionSuccess Then
+                                        If EventHandler_ItemPressed_After(infoEvento) = False Then
+                                            Return False
+                                        End If
                                     End If
                                 Case SAPbouiCOM.BoEventTypes.et_VALIDATE
 
@@ -43,7 +47,7 @@ Public Class OCRD
                     End Select
                 ElseIf infoEvento.BeforeAction = True Then
                     Select Case infoEvento.FormTypeEx
-                        Case "134"
+                        Case "172"
                             Select Case infoEvento.EventType
                                 Case SAPbouiCOM.BoEventTypes.et_COMBO_SELECT
 
@@ -63,7 +67,7 @@ Public Class OCRD
             Else
                 If infoEvento.BeforeAction = False Then
                     Select Case infoEvento.FormTypeEx
-                        Case "134"
+                        Case "172"
                             Select Case infoEvento.EventType
                                 Case SAPbouiCOM.BoEventTypes.et_FORM_VISIBLE
 
@@ -78,7 +82,7 @@ Public Class OCRD
                     End Select
                 Else
                     Select Case infoEvento.FormTypeEx
-                        Case "134"
+                        Case "172"
                             Select Case infoEvento.EventType
                                 Case SAPbouiCOM.BoEventTypes.et_CHOOSE_FROM_LIST
 
@@ -101,31 +105,37 @@ Public Class OCRD
     Private Function EventHandler_ItemPressed_After(ByRef pVal As ItemEvent) As Boolean
         Dim oForm As SAPbouiCOM.Form = Nothing
         Dim sMensaje As String = ""
-        Dim sBBDD As String = "" : Dim sBBDDDMaster As String = ""
-        Dim sCardCode As String = "" : Dim sCardType As String = ""
+        Dim sBBDD As String = "" : Dim sBBDDDMaster As String = "" : Dim sUser As String = "" : Dim sPass As String = ""
         Dim sSQL As String = ""
-        Dim OdtEmpresas As System.Data.DataTable = Nothing : Dim oCompanyDes As SAPbobsCOM.Company = Nothing
+        Dim OdtEmpresas As System.Data.DataTable = Nothing : Dim oCompanyDes As SAPbobsCOM.Company = Nothing : Dim oCompanyMaster As SAPbobsCOM.Company = Nothing
+
         EventHandler_ItemPressed_After = False
 
         Try
             oForm = objGlobal.SBOApp.Forms.Item(pVal.FormUID)
-            If oForm.Mode = BoFormMode.fm_ADD_MODE Or oForm.Mode = BoFormMode.fm_UPDATE_MODE Then
-                sCardCode = oForm.DataSources.DBDataSources.Item("OCRD").GetValue("CardCode", 0).ToString.Trim
-                sCardType = oForm.DataSources.DBDataSources.Item("OCRD").GetValue("CardType", 0).ToString.Trim
+            If pVal.ItemUID = "1" Then
                 sBBDD = objGlobal.refDi.compañia.CompanyDB
                 sSQL = "SELECT TOP 1 ""U_EXO_BBDD"" FROM ""@EXO_IPANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_TIPO""='M' "
                 sBBDDDMaster = objGlobal.refDi.SQL.sqlStringB1(sSQL)
-
-                ' Si estamos en la master enviamos datos a los destinos
                 If sBBDD = sBBDDDMaster Then
-                    OdtEmpresas.Clear()
                     OdtEmpresas = New System.Data.DataTable
-                    sSQL = "SELECT TOP 1 ""U_EXO_BBDD"" FROM ""@EXO_IPANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_TIPO""='D' "
+                    OdtEmpresas.Clear()
+                    sSQL = "SELECT * FROM ""@EXO_IPANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_TIPO""='D' "
                     OdtEmpresas = objGlobal.refDi.SQL.sqlComoDataTable(sSQL)
                     If OdtEmpresas.Rows.Count > 0 Then
                         objGlobal.SBOApp.StatusBar.SetText("Se va a proceder a recorrer las SOCIEDADES...", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
-                        For Each dr In OdtEmpresas.Rows
-                            'EXO_CONEXIONES.Connect_Company_Destino(oCompanyDes, objGlobal,)
+                        For Each dr As DataRow In OdtEmpresas.Rows
+                            Try
+                                sBBDD = dr.Item("U_EXO_BBDD").ToString : sUser = dr.Item("U_EXO_USER").ToString : sPass = dr.Item("U_EXO_PASS").ToString
+                                EXO_CONEXIONES.Connect_Company(oCompanyDes, objGlobal, sUser, sPass, sBBDD)
+                                objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                                EXO_GLOBALES.Sincroniza_Series(oCompanyDes, objGlobal)
+                            Catch ex As Exception
+                                objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". Error: " & ex.Message, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                            Finally
+                                objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". Fin Sincronización.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                                EXO_CONEXIONES.Disconnect_Company(oCompanyDes)
+                            End Try
                         Next
                     End If
                 End If
@@ -138,9 +148,7 @@ Public Class OCRD
         Catch ex As Exception
             Throw ex
         Finally
-            oForm.Freeze(False)
-            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oForm, Object))
-
+            EXO_CleanCOM.CLiberaCOM.Form(oForm)
         End Try
     End Function
 End Class

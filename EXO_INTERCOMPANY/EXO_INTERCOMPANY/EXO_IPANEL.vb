@@ -22,7 +22,7 @@ Public Class EXO_IPANEL
     End Sub
     Public Overrides Function filtros() As EventFilters
         Dim filtrosXML As Xml.XmlDocument = New Xml.XmlDocument
-        filtrosXML.LoadXml(objGlobal.funciones.leerEmbebido(Me.GetType(), "XML_FILTROS.xml"))
+        filtrosXML.LoadXml(objGlobal.funciones.leerEmbebido(Me.GetType(), "XML_FILTROS_INTERCOMPANY.xml"))
         Dim filtro As SAPbouiCOM.EventFilters = New SAPbouiCOM.EventFilters()
         filtro.LoadFromXML(filtrosXML.OuterXml)
 
@@ -39,14 +39,17 @@ Public Class EXO_IPANEL
     End Sub
     Public Overrides Function SBOApp_MenuEvent(infoEvento As MenuEvent) As Boolean
         Dim sExiste As String = ""
+        Dim oForm As SAPbouiCOM.Form = Nothing
         Try
             If infoEvento.BeforeAction = True Then
                 Select Case infoEvento.MenuUID
                     Case "1281", "1282" 'Buscar y añadir
-                        Return False
+                        oForm = objGlobal.SBOApp.Forms.ActiveForm()
+                        If oForm.TypeEx = "UDO_FT_EXO_IPANEL" Then
+                            Return False
+                        End If
                 End Select
             Else
-
                 Select Case infoEvento.MenuUID
                     Case "EXO-MnPA"
                         sCode = "INTERCOMPANY"
@@ -232,7 +235,7 @@ Public Class EXO_IPANEL
             If pVal.ItemUID = "1" Then
                 If pVal.ActionSuccess = True Then
                     If oForm.Mode = SAPbouiCOM.BoFormMode.fm_ADD_MODE Then 'Después de añadir
-                        objGlobal.SBOApp.ActivateMenuItem("1291")
+                        objGlobal.SBOApp.ActivateMenuItem("1289")
                     End If
                 End If
             End If
