@@ -1654,18 +1654,38 @@ Public Class EXO_GLOBALES
                 oSeries.Document = oRs.Fields.Item("ObjectCode").Value.ToString
                 oSeries.PeriodIndicator = oRs.Fields.Item("Indicator").Value.ToString
                 oSeries.GroupCode = CType(oRs.Fields.Item("GroupCode").Value.ToString, SAPbobsCOM.BoSeriesGroupEnum)
+                oSeries.DocumentSubType = oRs.Fields.Item("DocSubType").Value.ToString
                 If IsNumeric(oRs.Fields.Item("InitialNum").Value.ToString) Then
                     oSeries.InitialNumber = CType(oRs.Fields.Item("InitialNum").Value.ToString, Integer)
                 End If
                 If IsNumeric(oRs.Fields.Item("LastNum").Value.ToString) And CType(oRs.Fields.Item("LastNum").Value.ToString, Integer) > 0 Then
                     oSeries.LastNumber = CType(oRs.Fields.Item("LastNum").Value.ToString, Integer)
                 End If
+                oSeries.Remarks = oRs.Fields.Item("Remark").Value.ToString
                 oSeries.Prefix = oRs.Fields.Item("BeginStr").Value.ToString
                 oSeries.Suffix = oRs.Fields.Item("EndStr").Value.ToString
-                oSeries.Remarks = oRs.Fields.Item("Remark").Value.ToString
+                If IsNumeric(oRs.Fields.Item("NumSize").Value.ToString) Then
+                    oSeries.DigitNumber = CType(oRs.Fields.Item("NumSize").Value.ToString, Integer)
+                End If
+                Select Case oRs.Fields.Item("IsDigSerie").Value.ToString
+                    Case "Y" : oSeries.IsDigitalSeries = SAPbobsCOM.BoYesNoEnum.tYES
+                    Case Else : oSeries.IsDigitalSeries = SAPbobsCOM.BoYesNoEnum.tNO
+
+                End Select
+                Select Case oRs.Fields.Item("Locked").Value.ToString
+                    Case "Y" : oSeries.Locked = SAPbobsCOM.BoYesNoEnum.tYES
+                    Case Else : oSeries.Locked = SAPbobsCOM.BoYesNoEnum.tNO
+                End Select
+                Select Case oRs.Fields.Item("SeriesType").Value.ToString
+                    Case "B" : oSeries.SeriesType = SAPbobsCOM.BoSeriesTypeEnum.stBusinessPartner
+                    Case "D" : oSeries.SeriesType = SAPbobsCOM.BoSeriesTypeEnum.stDocument
+                    Case "I" : oSeries.SeriesType = SAPbobsCOM.BoSeriesTypeEnum.stItem
+                    Case "R" : oSeries.SeriesType = SAPbobsCOM.BoSeriesTypeEnum.stResource
+                End Select
+
                 Try
-                    'Graba la serie
-                    oSeriesParams = oSeriesService.AddSeries(oSeries)
+                'Graba la serie
+                oSeriesParams = oSeriesService.AddSeries(oSeries)
                     oObjGlobal.SBOApp.StatusBar.SetText("Sincronizado ObjectCode: " & sObjectCode_Nombre & " - Series Name: " &
                                                         oRs.Fields.Item("SeriesName").Value.ToString & " - Inicio: " & oRs.Fields.Item("InitialNum").Value.ToString &
                                                         " - Fin : " & oRs.Fields.Item("LastNum").Value.ToString, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
@@ -1679,6 +1699,7 @@ Public Class EXO_GLOBALES
                     'Call oSeriesService.AttachSeriesToDocument(oDocSeriesParam)
 
                     'Para poner la serie por defecto
+#Region "Serie por defecto"
                     If oRs.Fields.Item("DfltSeries").Value.ToString = oRs.Fields.Item("Series").Value.ToString Then
                         oDocSeriesParam = CType(oSeriesService.GetDataInterface(SAPbobsCOM.SeriesServiceDataInterfaces.ssdiDocumentSeriesParams), SAPbobsCOM.DocumentSeriesParams)
                         oDocSeriesParam.Document = oRs.Fields.Item("ObjectCode").Value.ToString
@@ -1692,11 +1713,13 @@ Public Class EXO_GLOBALES
 
                         oObjGlobal.SBOApp.StatusBar.SetText("ObjectCode: " & sObjectCode_Nombre & " - Serie Por Defecto: " & oRs.Fields.Item("DfltSeries").Value.ToString, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
                     End If
-
+#End Region
                 Catch ex As Exception
                     oObjGlobal.SBOApp.StatusBar.SetText("ObjectCode: " & sObjectCode_Nombre & " - Series Name: " &
                                                         oRs.Fields.Item("SeriesName").Value.ToString & " - Inicio: " & oRs.Fields.Item("InitialNum").Value.ToString &
-                                                        " - Fin : " & oRs.Fields.Item("LastNum").Value.ToString & ". Error: " & ex.Message, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                                                        " - Fin: " & oRs.Fields.Item("LastNum").Value.ToString & " - Prefijo: " & oRs.Fields.Item("BeginStr").Value.ToString &
+                                                       " - Sufijo: " & oRs.Fields.Item("EndStr").Value.ToString & " - Nº Dígitos: " & oRs.Fields.Item("NumSize").Value.ToString &
+                                                       ". Error: " & ex.Message, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                 End Try
                 oRs.MoveNext()
             Next
