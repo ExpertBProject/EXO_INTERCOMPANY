@@ -1664,6 +1664,7 @@ Public Class EXO_GLOBALES
                 oSeries.Suffix = oRs.Fields.Item("EndStr").Value.ToString
                 oSeries.Remarks = oRs.Fields.Item("Remark").Value.ToString
                 Try
+                    'Graba la serie
                     oSeriesParams = oSeriesService.AddSeries(oSeries)
                     oObjGlobal.SBOApp.StatusBar.SetText("Sincronizado ObjectCode: " & sObjectCode_Nombre & " - Series Name: " &
                                                         oRs.Fields.Item("SeriesName").Value.ToString & " - Inicio: " & oRs.Fields.Item("InitialNum").Value.ToString &
@@ -1677,25 +1678,26 @@ Public Class EXO_GLOBALES
                     ''attach Series to document
                     'Call oSeriesService.AttachSeriesToDocument(oDocSeriesParam)
 
-                    ''set the series to be the default series for the specify document
-                    oDocSeriesParam = CType(oSeriesService.GetDataInterface(SAPbobsCOM.SeriesServiceDataInterfaces.ssdiDocumentSeriesParams), SAPbobsCOM.DocumentSeriesParams)
-                    oDocSeriesParam.Document = oRs.Fields.Item("ObjectCode").Value.ToString
-                    'oDocSeriesParam.Series = oSeriesParams.Series Esto es el que se ha creado
-                    sSQL = "SELECT ""SeriesName"" FROM ""NNM1"" WHERE ""Series""=" & oRs.Fields.Item("DfltSeries").Value.ToString & " and ""ObjectCode""='" & oRs.Fields.Item("ObjectCode").Value.ToString & "' "
-                    sSerieDflt = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
-                    sSQL = "SELECT ""Series"" FROM """ & oCompanyDes.CompanyDB & """.""NNM1"" WHERE ""SeriesName""='" & sSerieDflt & "' and ""ObjectCode""='" & oRs.Fields.Item("ObjectCode").Value.ToString & "' "
-                    sSerieDflt = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
-                    oDocSeriesParam.Series = CType(sSerieDflt, Integer)
-                    Call oSeriesService.SetDefaultSeriesForCurrentUser(oDocSeriesParam)
+                    'Para poner la serie por defecto
+                    If oRs.Fields.Item("DfltSeries").Value.ToString = oRs.Fields.Item("Series").Value.ToString Then
+                        oDocSeriesParam = CType(oSeriesService.GetDataInterface(SAPbobsCOM.SeriesServiceDataInterfaces.ssdiDocumentSeriesParams), SAPbobsCOM.DocumentSeriesParams)
+                        oDocSeriesParam.Document = oRs.Fields.Item("ObjectCode").Value.ToString
+                        'oDocSeriesParam.Series = oSeriesParams.Series Esto es el que se ha creado
+                        sSQL = "SELECT ""SeriesName"" FROM ""NNM1"" WHERE ""Series""=" & oRs.Fields.Item("DfltSeries").Value.ToString & " and ""ObjectCode""='" & oRs.Fields.Item("ObjectCode").Value.ToString & "' "
+                        sSerieDflt = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                        sSQL = "SELECT ""Series"" FROM """ & oCompanyDes.CompanyDB & """.""NNM1"" WHERE ""SeriesName""='" & sSerieDflt & "' and ""ObjectCode""='" & oRs.Fields.Item("ObjectCode").Value.ToString & "' "
+                        sSerieDflt = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                        oDocSeriesParam.Series = CType(sSerieDflt, Integer)
+                        Call oSeriesService.SetDefaultSeriesForCurrentUser(oDocSeriesParam)
 
-                    oObjGlobal.SBOApp.StatusBar.SetText("ObjectCode: " & sObjectCode_Nombre & " - Serie Por Defecto: " & oRs.Fields.Item("DfltSeries").Value.ToString, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
+                        oObjGlobal.SBOApp.StatusBar.SetText("ObjectCode: " & sObjectCode_Nombre & " - Serie Por Defecto: " & oRs.Fields.Item("DfltSeries").Value.ToString, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
+                    End If
+
                 Catch ex As Exception
                     oObjGlobal.SBOApp.StatusBar.SetText("ObjectCode: " & sObjectCode_Nombre & " - Series Name: " &
                                                         oRs.Fields.Item("SeriesName").Value.ToString & " - Inicio: " & oRs.Fields.Item("InitialNum").Value.ToString &
                                                         " - Fin : " & oRs.Fields.Item("LastNum").Value.ToString & ". Error: " & ex.Message, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                 End Try
-
-
                 oRs.MoveNext()
             Next
             Sincroniza_Series = True
