@@ -112,9 +112,9 @@ Public Class EXO_OCRD
             oForm = objGlobal.SBOApp.Forms.Item(pVal.FormUID)
             If oForm.TypeEx = "134" And pVal.ItemUID = "1" Then
                 Select Case _sEstado_Formulario
-                    Case "3"
-                        objGlobal.SBOApp.ActivateMenuItem("1289") 'Actualizar
+                    Case "3" : objGlobal.SBOApp.ActivateMenuItem("1289") 'Ultimo dato
                     Case "2" : objGlobal.SBOApp.ActivateMenuItem("1304") 'Actualizar
+                    Case "0" : objGlobal.SBOApp.ActivateMenuItem("1289") 'Ultimo dato
                 End Select
                 _sEstado_Formulario = ""
             End If
@@ -133,10 +133,11 @@ Public Class EXO_OCRD
     Private Function Intercompany_After(ByRef oform As SAPbouiCOM.Form) As Boolean
         Dim sMensaje As String = ""
         Dim sBBDD As String = "" : Dim sBBDDDMaster As String = "" : Dim sUser As String = "" : Dim sPass As String = ""
-        Dim sCardCode As String = "" : Dim sCardName As String = "" : Dim sCardType As String = ""
+        Dim sCardCode As String = "" : Dim sCardName As String = "" : Dim sCardType As String = "" : Dim sSerie As String = ""
         Dim sSQL As String = ""
         Dim OdtEmpresas As System.Data.DataTable = Nothing : Dim oCompanyDes As SAPbobsCOM.Company = Nothing : Dim oCompanyMaster As SAPbobsCOM.Company = Nothing
         Dim oOCRD As SAPbobsCOM.BusinessPartners = Nothing
+        Dim bHaSincronizado = False
         Intercompany_After = False
 
         Try
@@ -144,12 +145,13 @@ Public Class EXO_OCRD
                 sCardCode = oform.DataSources.DBDataSources.Item("OCRD").GetValue("CardCode", 0).ToString.Trim
                 sCardName = oform.DataSources.DBDataSources.Item("OCRD").GetValue("CardName", 0).ToString.Trim
                 sCardType = oform.DataSources.DBDataSources.Item("OCRD").GetValue("CardType", 0).ToString.Trim
+                sSerie = CType(oform.Items.Item("1320002080").Specific, SAPbouiCOM.ComboBox).Selected.Description
                 sBBDD = objGlobal.refDi.compañia.CompanyDB
                 sSQL = "SELECT TOP 1 ""U_EXO_BBDD"" FROM ""@EXO_IPANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_TIPO""='M' "
                 sBBDDDMaster = objGlobal.refDi.SQL.sqlStringB1(sSQL)
 
                 ' Si estamos en la master enviamos datos a los destinos
-                If sBBDD = sBBDDDMaster And sCardType = "S" Then
+                If sBBDD = sBBDDDMaster And (sCardType = "S" Or (sCardType = "C" And sSerie = "CI")) Then
                     OdtEmpresas = New System.Data.DataTable
                     OdtEmpresas.Clear()
                     sSQL = "SELECT * FROM ""@EXO_IPANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_TIPO""='D' "
@@ -163,7 +165,7 @@ Public Class EXO_OCRD
                                     sBBDD = dr.Item("U_EXO_BBDD").ToString : sUser = dr.Item("U_EXO_USER").ToString : sPass = dr.Item("U_EXO_PASS").ToString
                                     EXO_CONEXIONES.Connect_Company(oCompanyDes, objGlobal, sUser, sPass, sBBDD)
                                     objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". Sincronizando Proveedor: " & sCardCode & " - " & sCardName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
-                                    EXO_GLOBALES.Sincroniza_proveedor_Master(oOCRD, oCompanyDes, objGlobal)
+                                    EXO_GLOBALES.Sincroniza_proveedor_Master(oOCRD, oCompanyDes, objGlobal, sSerie)
                                 Catch ex As Exception
                                     objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". Error: " & ex.Message, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                                 Finally
@@ -189,16 +191,26 @@ Public Class EXO_OCRD
                                     sBBDD = dr.Item("U_EXO_BBDD").ToString : sUser = dr.Item("U_EXO_USER").ToString : sPass = dr.Item("U_EXO_PASS").ToString
                                     EXO_CONEXIONES.Connect_Company(oCompanyMaster, objGlobal, sUser, sPass, sBBDD)
                                     objGlobal.SBOApp.StatusBar.SetText("Sincronizando Proveedor: " & sCardCode & " - " & sCardName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
-                                    EXO_GLOBALES.Sincroniza_proveedor(oOCRD, oCompanyMaster, objGlobal)
+                                    bHaSincronizado = EXO_GLOBALES.Sincroniza_proveedor(oOCRD, oCompanyMaster, objGlobal)
+                                    If bHaSincronizado = False Then
+                                        objGlobal.SBOApp.StatusBar.SetText("Proveedor no creado en la empresa Master. Por favor, dadlo de alta en la empresa master. ", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                                        oOCRD.Remove()
+                                        objGlobal.SBOApp.MessageBox("Proveedor no creado en la empresa Master. Por favor, dadlo de alta en la empresa master. ")
+                                    End If
                                 Catch ex As Exception
                                     objGlobal.SBOApp.StatusBar.SetText("Error: " & ex.Message, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                                 Finally
                                     objGlobal.SBOApp.StatusBar.SetText("Fin Sincronización.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
                                     EXO_CONEXIONES.Disconnect_Company(oCompanyMaster)
-                                    Select Case oform.Mode
-                                        Case oform.Mode.fm_ADD_MODE : _sEstado_Formulario = "3"
-                                        Case oform.Mode.fm_UPDATE_MODE : _sEstado_Formulario = "2"
-                                    End Select
+                                    If bHaSincronizado = True Then
+                                        Select Case oform.Mode
+                                            Case oform.Mode.fm_ADD_MODE : _sEstado_Formulario = "3"
+                                            Case oform.Mode.fm_UPDATE_MODE : _sEstado_Formulario = "2"
+                                        End Select
+                                    Else
+                                        _sEstado_Formulario = "0"
+                                    End If
+
 
                                 End Try
                             Next

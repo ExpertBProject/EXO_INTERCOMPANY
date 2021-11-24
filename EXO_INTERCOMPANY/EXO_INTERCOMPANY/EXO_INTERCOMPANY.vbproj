@@ -111,9 +111,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="EXO_CONEXIONES.vb" />
+    <Compile Include="EXO_DOCVENTAS.vb" />
     <Compile Include="EXO_GLOBALES.vb" />
+    <Compile Include="EXO_IIC.vb" />
     <Compile Include="EXO_IPANEL.vb" />
     <Compile Include="EXO_ONNM.vb" />
+    <Compile Include="EXO_OWST.vb" />
+    <Compile Include="EXO_OWTM.vb" />
     <Compile Include="My Project\AssemblyInfo.vb" />
     <Compile Include="My Project\Application.Designer.vb">
       <AutoGen>True</AutoGen>
@@ -130,6 +134,7 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
     <Compile Include="EXO_OCRD.vb" />
+    <Compile Include="OUSR.vb" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="My Project\Resources.resx">
@@ -178,6 +183,12 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="XML_MENU\EXO_MENU.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="XML_BD\UDO_EXO_IIC.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="XML_BD\UDFs_OINV.xml" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
   <PropertyGroup>

@@ -141,7 +141,7 @@ Public Class EXO_GLOBALES
     End Function
 #End Region
 
-    Public Shared Function Sincroniza_proveedor_Master(ByRef oOCRD As SAPbobsCOM.BusinessPartners, ByRef oCompanyDes As SAPbobsCOM.Company, ByRef oObjGlobal As EXO_UIAPI.EXO_UIAPI) As Boolean
+    Public Shared Function Sincroniza_proveedor_Master(ByRef oOCRD As SAPbobsCOM.BusinessPartners, ByRef oCompanyDes As SAPbobsCOM.Company, ByRef oObjGlobal As EXO_UIAPI.EXO_UIAPI, ByVal sSerie As String) As Boolean
 #Region "Variables"
         Dim oOCRD_Destino As SAPbobsCOM.BusinessPartners = Nothing
         Dim sLicTradNum As String = "" : Dim sCardCode As String = "" : Dim sCardType As String = ""
@@ -200,12 +200,16 @@ Public Class EXO_GLOBALES
             Else
                 sExiste_IC = False
                 'oObjGlobal.SBOApp.StatusBar.SetText("No se encuentra con CIF/NIF " & sLicTradNum & " el interlocutor " & oOCRD.CardName & ". Se procede a crearlo.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
-                oOCRD_Destino.Series = oOCRD.Series
-                oOCRD_Destino.CardCode = oOCRD.CardCode
+                'Buscamos la serie, ya que puede que tenga otro código
+                oOCRD_Destino.CardType = oOCRD.CardType
+                sSQL = "SELECT ""Series"" FROM """ & oCompanyDes.CompanyDB & """.""NNM1"" WHERE ""SeriesName""='" & sSerie & "' and ""ObjectCode""='2'  "
+                oOCRD_Destino.Series = CType(oObjGlobal.refDi.SQL.sqlStringB1(sSQL), Integer)
+                If sSerie = "Manual" Then
+                    oOCRD_Destino.CardCode = oOCRD.CardCode
+                End If
             End If
 
             oOCRD_Destino.CardName = oOCRD.CardName
-            oOCRD_Destino.CardType = oOCRD.CardType
             oOCRD_Destino.CardForeignName = oOCRD.CardForeignName
             oOCRD_Destino.Currency = oOCRD.Currency
 #Region "Grupos"
@@ -804,7 +808,10 @@ Public Class EXO_GLOBALES
             oOCRD_Destino.FatherType = oOCRD.FatherType
 
             oOCRD_Destino.DownPaymentInterimAccount = oOCRD.DownPaymentInterimAccount
-            oOCRD_Destino.DownPaymentClearAct = oOCRD.DownPaymentClearAct
+            If oOCRD.DownPaymentClearAct.ToString.Trim <> "" Then
+                oOCRD_Destino.DownPaymentClearAct = oOCRD.DownPaymentClearAct
+            End If
+
             'Falta una cuenta y las del botón
 
             'Falta connbp
@@ -849,12 +856,15 @@ Public Class EXO_GLOBALES
 #End Region
 
             If sExiste_IC = False Then
-                'If oOCRD_Destino.Add() <> 0 Then
-                '    oObjGlobal.SBOApp.StatusBar.SetText("Error Creando IC - " & sLicTradNum & " - " & oOCRD.CardName & " - " &
-                '                                                oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                'Else
-                '    oObjGlobal.SBOApp.StatusBar.SetText("IC Creado- " & sLicTradNum & " - " & oOCRD.CardName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
-                'End If
+                If sSerie = "CI" Or sSerie = "PI" Then
+                    If oOCRD_Destino.Add() <> 0 Then
+                        oObjGlobal.SBOApp.StatusBar.SetText("Error Creando IC - " & sLicTradNum & " - " & oOCRD.CardName & " - " &
+                                                                    oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                    Else
+                        oObjGlobal.SBOApp.StatusBar.SetText("IC Creado- " & sLicTradNum & " - " & oOCRD.CardName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
+                    End If
+                End If
+
             Else
                 If oOCRD_Destino.Update() <> 0 Then
                     oObjGlobal.SBOApp.StatusBar.SetText("Error actualizando IC - " & sLicTradNum & " - " & oOCRD.CardName & " - " &
@@ -1586,13 +1596,16 @@ Public Class EXO_GLOBALES
                 Else
                     oObjGlobal.SBOApp.StatusBar.SetText("IC Actualizado - " & sLicTradNum & " - " & oOCRD.CardName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
                 End If
+                Sincroniza_proveedor = True
+            Else
+                Sincroniza_proveedor = False
             End If
-            Sincroniza_proveedor = True
+
         Catch ex As Exception
             Throw ex
         Finally
 #Region "Liberar"
-            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oOCRD, Object)) : EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oOCRD_Master, Object))
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oOCRD_Master, Object))
             EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oRs, Object))
             EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oRsGrupos_Des, Object))
             EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oOCRG, Object)) : EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oOCRG_Master, Object))
@@ -1622,24 +1635,40 @@ Public Class EXO_GLOBALES
         Dim oSeries As SAPbobsCOM.Series = Nothing
         Dim oSeriesParams As SAPbobsCOM.SeriesParams = Nothing
         Dim oDocSeriesParam As SAPbobsCOM.DocumentSeriesParams = Nothing
-        Dim sObjectCode_Nombre As String = "" : Dim sSerieDflt As String = ""
+        Dim sObjectCode_Nombre As String = "" : Dim sSerieDflt As String = "" : Dim sSerieDestino As String = ""
 #End Region
         Sincroniza_Series = False
         Try
             oRs = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset), SAPbobsCOM.Recordset)
-
+#Region "Indicadores de periodo"
             'Primero Insertamos los "Indicator"(Indicador de periodo en la tabla OPID)
             sSQL = "INSERT INTO """ & oCompanyDes.CompanyDB & """.""OPID"" "
             sSQL &= " SELECT ""O"".""Indicator"" "
             sSQL &= " FROM """ & oObjGlobal.compañia.CompanyDB & """.""OPID"" ""O"" "
             sSQL &= " LEFT JOIN """ & oCompanyDes.CompanyDB & """.""OPID"" ""D"" ON ""O"".""Indicator""=""D"".""Indicator"" "
             sSQL &= " WHERE ifnull(""D"".""Indicator"",'')='' "
-
             If oObjGlobal.refDi.SQL.executeNonQuery(sSQL) <> True Then
                 oObjGlobal.SBOApp.StatusBar.SetText("Error sincronizando Indicadores de periodo.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+            Else
+                oObjGlobal.SBOApp.StatusBar.SetText("Sincronizado Indicadores de periodo.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
             End If
+#End Region
+
+#Region "Campo DocAlias en ONNM"
+            'No se puede actualizar por lo que se hace un UPDATE
+            sSQL = "UPDATE ""D"" SET ""D"".""DocAlias""=""O"".""DocAlias"" "
+            sSQL &= " FROM """ & oObjGlobal.compañia.CompanyDB & """.""ONNM"" ""O"" LEFT JOIN """ & oCompanyDes.CompanyDB & """.""ONNM"" ""D"" "
+            sSQL &= " ON ""O"".""ObjectCode""=""D"".""ObjectCode"" and ""O"".""DocSubType""=""D"".""DocSubType"" "
+            sSQL &= " WHERE ""O"".""ObjectCode""=""D"".""ObjectCode"" and ""O"".""DocSubType""=""D"".""DocSubType"" "
+            If oObjGlobal.refDi.SQL.executeNonQuery(sSQL) <> True Then
+                oObjGlobal.SBOApp.StatusBar.SetText("Error sincronizando Nombres de menús.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+            Else
+                oObjGlobal.SBOApp.StatusBar.SetText("Sincronizado Nombres de menús.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
+            End If
+#End Region
+
             sSQL = "SELECT ""C"".""DfltSeries"",  ""M"".* FROM """ & oObjGlobal.compañia.CompanyDB & """.""NNM1"" ""M"" "
-            sSQL &= "INNER JOIN """ & oObjGlobal.compañia.CompanyDB & """.""ONNM"" ""C"" ON ""C"".""ObjectCode""=""M"".""ObjectCode"" "
+            sSQL &= "INNER JOIN """ & oObjGlobal.compañia.CompanyDB & """.""ONNM"" ""C"" ON ""C"".""ObjectCode""=""M"".""ObjectCode"" And  ""C"".""DocSubType""=""M"".""DocSubType"" "
             sSQL &= " Left JOIN """ & oCompanyDes.CompanyDB & """.""NNM1"" ""D""  "
             sSQL &= " ON ""M"".""ObjectCode""=""D"".""ObjectCode"" And  ""M"".""DocSubType""=""D"".""DocSubType"" And ""M"".""SeriesName""=""D"".""SeriesName"" And  ""M"".""SeriesType""=""D"".""SeriesType"" "
             sSQL &= " WHERE ifnull(""D"".""Series"",'0')=0 "
@@ -1652,6 +1681,7 @@ Public Class EXO_GLOBALES
                 oSeries = CType(oSeriesService.GetDataInterface(SAPbobsCOM.SeriesServiceDataInterfaces.ssdiSeries), SAPbobsCOM.Series)
                 oSeries.Name = oRs.Fields.Item("SeriesName").Value.ToString
                 oSeries.Document = oRs.Fields.Item("ObjectCode").Value.ToString
+                ' oSeries.ATDocumentType=
                 oSeries.PeriodIndicator = oRs.Fields.Item("Indicator").Value.ToString
                 oSeries.GroupCode = CType(oRs.Fields.Item("GroupCode").Value.ToString, SAPbobsCOM.BoSeriesGroupEnum)
                 oSeries.DocumentSubType = oRs.Fields.Item("DocSubType").Value.ToString
@@ -1684,34 +1714,55 @@ Public Class EXO_GLOBALES
                 End Select
 
                 Try
-                'Graba la serie
-                oSeriesParams = oSeriesService.AddSeries(oSeries)
+                    'Graba la serie
+                    oSeriesParams = oSeriesService.AddSeries(oSeries)
                     oObjGlobal.SBOApp.StatusBar.SetText("Sincronizado ObjectCode: " & sObjectCode_Nombre & " - Series Name: " &
                                                         oRs.Fields.Item("SeriesName").Value.ToString & " - Inicio: " & oRs.Fields.Item("InitialNum").Value.ToString &
                                                         " - Fin : " & oRs.Fields.Item("LastNum").Value.ToString, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
-                    ''set document type(e.g. Deliveries=15)
-                    'oSeriesParams.Document = oRs.Fields.Item("ObjectCode").Value.ToString
 
-                    ''set the series code
-                    'oSeriesParams.Series = oSeriesParams.Series
+#Region "Campo Cancelación"
+                    'Como no está el campo, lo actualizamos
 
-                    ''attach Series to document
-                    'Call oSeriesService.AttachSeriesToDocument(oDocSeriesParam)
-
+                    sSQL = "SELECT ""Series"" FROM """ & oCompanyDes.CompanyDB & """.""NNM1"" WHERE ""SeriesName""='" & oRs.Fields.Item("SeriesName").Value.ToString & "' and ""ObjectCode""='" & oRs.Fields.Item("ObjectCode").Value.ToString & "' "
+                    sSQL &= " and ""DocSubType""='" & oRs.Fields.Item("DocSubType").Value.ToString & "' "
+                    sSerieDestino = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                    sSQL = "UPDATE """ & oCompanyDes.CompanyDB & """.""NNM1"" SET ""IsForCncl""='" & oRs.Fields.Item("IsForCncl").Value.ToString & "' "
+                    sSQL &= " WHERE ""Series""='" & sSerieDestino & "' and ""ObjectCode""='" & oRs.Fields.Item("ObjectCode").Value.ToString & "' "
+                    sSQL &= " and ""DocSubType""='" & oRs.Fields.Item("DocSubType").Value.ToString & "' "
+                    If oObjGlobal.refDi.SQL.executeNonQuery(sSQL) = False Then
+                        oObjGlobal.SBOApp.StatusBar.SetText("Sincronizando ObjectCode: " & sObjectCode_Nombre & " - Serie: " &
+                                                        sSerieDestino & " - No se ha podido actualizar el campo Cancelación", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                    End If
+#End Region
+#Region "Ultimo numero"
+                    If CType(oRs.Fields.Item("LastNum").Value.ToString, Integer) = 0 Then
+                        sSQL = "UPDATE """ & oCompanyDes.CompanyDB & """.""NNM1"" SET ""LastNum""=NULL "
+                        sSQL &= " WHERE ""Series""='" & sSerieDestino & "' and ""ObjectCode""='" & oRs.Fields.Item("ObjectCode").Value.ToString & "' "
+                        sSQL &= " and ""DocSubType""='" & oRs.Fields.Item("DocSubType").Value.ToString & "' "
+                        If oObjGlobal.refDi.SQL.executeNonQuery(sSQL) = False Then
+                            'oObjGlobal.SBOApp.StatusBar.SetText("Sincronizando ObjectCode: " & sObjectCode_Nombre & " - Serie: " &
+                            'sSerieDestino & " - No se ha podido actualizar el campo Cancelación", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                        End If
+                    End If
+#End Region
                     'Para poner la serie por defecto
 #Region "Serie por defecto"
                     If oRs.Fields.Item("DfltSeries").Value.ToString = oRs.Fields.Item("Series").Value.ToString Then
                         oDocSeriesParam = CType(oSeriesService.GetDataInterface(SAPbobsCOM.SeriesServiceDataInterfaces.ssdiDocumentSeriesParams), SAPbobsCOM.DocumentSeriesParams)
                         oDocSeriesParam.Document = oRs.Fields.Item("ObjectCode").Value.ToString
+                        oDocSeriesParam.DocumentSubType = oRs.Fields.Item("DocSubType").Value.ToString
                         'oDocSeriesParam.Series = oSeriesParams.Series Esto es el que se ha creado
-                        sSQL = "SELECT ""SeriesName"" FROM ""NNM1"" WHERE ""Series""=" & oRs.Fields.Item("DfltSeries").Value.ToString & " and ""ObjectCode""='" & oRs.Fields.Item("ObjectCode").Value.ToString & "' "
+                        sSQL = "SELECT ""SeriesName"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""NNM1"" WHERE ""Series""=" & oRs.Fields.Item("DfltSeries").Value.ToString
+                        sSQL &= " and ""ObjectCode""='" & oRs.Fields.Item("ObjectCode").Value.ToString & "' "
+                        sSQL &= " and ""DocSubType""='" & oRs.Fields.Item("DocSubType").Value.ToString & "' "
                         sSerieDflt = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
                         sSQL = "SELECT ""Series"" FROM """ & oCompanyDes.CompanyDB & """.""NNM1"" WHERE ""SeriesName""='" & sSerieDflt & "' and ""ObjectCode""='" & oRs.Fields.Item("ObjectCode").Value.ToString & "' "
+                        sSQL &= " and ""DocSubType""='" & oRs.Fields.Item("DocSubType").Value.ToString & "' "
                         sSerieDflt = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
                         oDocSeriesParam.Series = CType(sSerieDflt, Integer)
-                        Call oSeriesService.SetDefaultSeriesForCurrentUser(oDocSeriesParam)
-
-                        oObjGlobal.SBOApp.StatusBar.SetText("ObjectCode: " & sObjectCode_Nombre & " - Serie Por Defecto: " & oRs.Fields.Item("DfltSeries").Value.ToString, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
+                        'Call oSeriesService.SetDefaultSeriesForCurrentUser(oDocSeriesParam)
+                        Call oSeriesService.SetDefaultSeriesForAllUsers(oDocSeriesParam)
+                        oObjGlobal.SBOApp.StatusBar.SetText("ObjectCode: " & sObjectCode_Nombre & " - Serie Por Defecto Origen: " & oRs.Fields.Item("DfltSeries").Value.ToString & " - Destino: " & sSerieDflt, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
                     End If
 #End Region
                 Catch ex As Exception
@@ -1730,6 +1781,7 @@ Public Class EXO_GLOBALES
             EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oRs, Object))
         End Try
     End Function
+
     Public Shared Function Nombre_ObjectType(ByVal sObjectType As String) As String
         Dim sObjectCode As String = ""
         Nombre_ObjectType = ""
@@ -2068,4 +2120,846 @@ Public Class EXO_GLOBALES
 
     End Function
 
+    Public Shared Function CrearFacturaCompra(ByRef oObjGlobal As EXO_UIAPI.EXO_UIAPI, ByRef oForm As SAPbouiCOM.Form) As Boolean
+#Region "Variables"
+        Dim oOPCH As SAPbobsCOM.Documents = Nothing
+        Dim oCompanyDes As SAPbobsCOM.Company = Nothing
+        Dim sCardCodeProv As String = "" : Dim sCardCodeCli As String = "" : Dim sSerieCli As String = ""
+        Dim sDocEntryO As String = "" : Dim sObjTypeO As String = "" : Dim sDocNumO As String = ""
+        Dim sDocEntryD As String = "" : Dim sObjTypeD As String = "" : Dim sDocNumD As String = ""
+        Dim sBBDDMaster As String = ""
+        Dim sBBDDDestino As String = "" : Dim sUser As String = "" : Dim sPass As String = ""
+        Dim sSQL As String = "" : Dim sMensaje As String = "" : Dim sError As String = ""
+        Dim oRs As SAPbobsCOM.Recordset = Nothing
+        Dim oXml As System.Xml.XmlDocument = New System.Xml.XmlDocument
+        Dim oNodes As System.Xml.XmlNodeList = Nothing
+        Dim oNode As System.Xml.XmlNode = Nothing
+#End Region
+
+        CrearFacturaCompra = False
+        Try
+            'Buscamos la serie de la factura y comprobamos que sea CI            
+            sSerieCli = Left(oForm.DataSources.DBDataSources.Item("OINV").GetValue("CardCode", 0).ToString.Trim, 2)
+            If sSerieCli.Trim = "CI" Then
+                oRs = CType(oObjGlobal.compañia.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset), SAPbobsCOM.Recordset)
+                sSQL = "SELECT ""U_EXO_BBDD"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""@EXO_IPANELL"" where ""U_EXO_TIPO""='M' "
+                sBBDDMaster = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                If sBBDDMaster <> "" Then
+                    'Buscamos los datos necesarios para realizar el documento
+
+                    'En la empresa donde estoy generando el documento de venta, miro a ver qué proveedor debo coger
+                    sSQL = "SELECT ""U_EXO_PROV"" FROM """ & sBBDDMaster & """.""@EXO_IICL"" WHERE  ""U_EXO_BBDD""='" & oObjGlobal.compañia.CompanyDB & "' "
+                    sCardCodeProv = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                    If sCardCodeProv <> "" Then
+#Region "Datos necesarios"
+                        'Cogemos el cliente con que hemos hecho la factura de ventas y buscamos la empresa donde debemos crear la factura de compra
+                        sCardCodeCli = oForm.DataSources.DBDataSources.Item("OINV").GetValue("CardCode", 0).ToString.Trim
+                        sDocEntryO = oForm.DataSources.DBDataSources.Item("OINV").GetValue("DocEntry", 0).ToString.Trim
+                        sDocNumO = oForm.DataSources.DBDataSources.Item("OINV").GetValue("DocNum", 0).ToString.Trim
+                        sObjTypeO = oForm.DataSources.DBDataSources.Item("OINV").GetValue("ObjType", 0).ToString.Trim
+                        sSQL = "Select ""U_EXO_BBDD"" FROM """ & sBBDDMaster & """.""@EXO_IICL"" WHERE  ""U_EXO_CLI""='" & sCardCodeCli & "' "
+#End Region
+                        sBBDDDestino = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                        If sBBDDDestino <> "" Then
+                            oObjGlobal.SBOApp.StatusBar.SetText("Conectando con empresa destino...", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                            sSQL = "SELECT ""U_EXO_USER"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""@EXO_IPANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_BBDD""='" & sBBDDDestino & "' "
+                            sUser = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                            sSQL = "SELECT ""U_EXO_PASS"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""@EXO_IPANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_BBDD""='" & sBBDDDestino & "' "
+                            sPass = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                            EXO_CONEXIONES.Connect_Company(oCompanyDes, oObjGlobal, sUser, sPass, sBBDDDestino)
+                            oObjGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". Creando factura de compra. Proveedor: " & sCardCodeProv, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                            oOPCH = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPurchaseInvoices), SAPbobsCOM.Documents)
+#Region "Datos Cabecera"
+                            oOPCH.CardCode = sCardCodeProv
+                            oOPCH.NumAtCard = oForm.DataSources.DBDataSources.Item("OINV").GetValue("NumAtCard", 0).ToString.Trim
+                            'comentarios
+                            oOPCH.Comments = "Empresa Origen:  " & oObjGlobal.compañia.CompanyDB & vbCrLf & "Tipo Doc.: " & EXO_GLOBALES.Nombre_ObjectType(sObjTypeO) &
+                                             vbCrLf & "Nº Documento: " & sDocNumO
+                            oOPCH.UserFields.Fields.Item("U_EXO_IDOCENTRY").Value = sDocEntryO
+                            oOPCH.UserFields.Fields.Item("U_EXO_IDOCTYPE").Value = sObjTypeO
+                            oOPCH.UserFields.Fields.Item("U_EXO_IDOCNUM").Value = sDocNumO
+                            oOPCH.UserFields.Fields.Item("U_EXO_IBBDD").Value = oObjGlobal.compañia.CompanyDB
+                            oOPCH.DiscountPercent = EXO_GLOBALES.DblTextToNumber(oCompanyDes, oForm.DataSources.DBDataSources.Item("OINV").GetValue("DiscPrcnt", 0).ToString.Trim)
+                            Dim dFecha As Date = New Date(CType(Left(oForm.DataSources.DBDataSources.Item("OINV").GetValue("TaxDate", 0).ToString.Trim, 4), Integer), CType(Mid(oForm.DataSources.DBDataSources.Item("OINV").GetValue("TaxDate", 0).ToString.Trim, 5, 2), Integer), CType(Right(oForm.DataSources.DBDataSources.Item("OINV").GetValue("TaxDate", 0).ToString.Trim, 2), Integer))
+                            oOPCH.TaxDate = dFecha
+                            dFecha = New Date(CType(Left(oForm.DataSources.DBDataSources.Item("OINV").GetValue("DocDate", 0).ToString.Trim, 4), Integer), CType(Mid(oForm.DataSources.DBDataSources.Item("OINV").GetValue("DocDate", 0).ToString.Trim, 5, 2), Integer), CType(Right(oForm.DataSources.DBDataSources.Item("OINV").GetValue("DocDate", 0).ToString.Trim, 2), Integer))
+                            oOPCH.DocDate = dFecha
+                            Select Case oForm.DataSources.DBDataSources.Item("OINV").GetValue("DocType", 0).ToString.Trim
+                                Case "I" : oOPCH.DocType = SAPbobsCOM.BoDocumentTypes.dDocument_Items
+                                Case Else : oOPCH.DocType = SAPbobsCOM.BoDocumentTypes.dDocument_Service
+                            End Select
+#End Region
+#Region "Líneas"
+                            sSQL = "SELECT * FROM """ & oObjGlobal.compañia.CompanyDB & """.""INV1"" WHERE ""DocEntry""=" & sDocEntryO
+                            oRs.DoQuery(sSQL)
+                            oXml.LoadXml(oRs.GetAsXML())
+                            oNodes = oXml.SelectNodes("//row")
+                            'crear lineas lineas
+                            For i As Integer = 0 To oNodes.Count - 1
+                                oNode = oNodes.Item(i)
+                                If i <> 0 Then
+                                    oOPCH.Lines.Add()
+                                End If
+                                Select Case oForm.DataSources.DBDataSources.Item("OINV").GetValue("DocType", 0).ToString.Trim
+                                    Case "I"
+                                        oOPCH.Lines.ItemCode = oNode.SelectSingleNode("ItemCode").InnerText
+                                        oOPCH.Lines.ItemDescription = oNode.SelectSingleNode("Dscription").InnerText
+                                        oOPCH.Lines.Quantity = CDbl(oNode.SelectSingleNode("Quantity").InnerText.ToString.Replace(".", ","))
+                                        'precio
+                                        oOPCH.Lines.UnitPrice = CDbl(oNode.SelectSingleNode("PriceBefDi").InnerText.ToString.Replace(".", ","))
+                                        'descuento
+                                        oOPCH.Lines.DiscountPercent = CDbl(oNode.SelectSingleNode("DiscPrcnt").InnerText.ToString.Replace(".", ","))
+                                    Case Else
+                                        oOPCH.Lines.AccountCode = oNode.SelectSingleNode("AcctCode").InnerText
+                                        oOPCH.Lines.UnitPrice = CDbl(oNode.SelectSingleNode("Price").InnerText.ToString.Replace(".", ","))
+                                End Select
+                            Next
+#End Region
+                            If oOPCH.Add() <> 0 Then
+                                sError = oCompanyDes.GetLastErrorCode.ToString & " / " & oCompanyDes.GetLastErrorDescription.Replace("'", "")
+                                oObjGlobal.SBOApp.StatusBar.SetText("(EXO) - " & sError, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                                oObjGlobal.SBOApp.MessageBox(sError)
+                                Exit Function
+                            Else
+                                oCompanyDes.GetNewObjectCode(sDocEntryD)
+                                sSQL = "SELECT ""DocNum"" FROM """ & oCompanyDes.CompanyDB & """.""OPCH"" WHERE ""DocEntry""=" & sDocEntryD
+                                sDocNumD = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                                sSQL = "SELECT ""ObjType"" FROM """ & oCompanyDes.CompanyDB & """.""OPCH"" WHERE ""DocEntry""=" & sDocEntryD
+                                sObjTypeD = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                                'udpate
+                                sMensaje = " Empresa Destino: " & oCompanyDes.CompanyDB & vbCrLf & "Tipo Doc.: " & EXO_GLOBALES.Nombre_ObjectType(sObjTypeD) & " - Nº Documento: " & sDocNumD
+                                sSQL = "UPDATE """ & oObjGlobal.compañia.CompanyDB & """.""OINV"" "
+                                sSQL &= " SET ""U_EXO_IDOCENTRY"" =" & sDocEntryD & ", ""U_EXO_IDOCTYPE""='" & sObjTypeD & "', ""U_EXO_IBBDD"" ='" & sBBDDDestino & "', ""U_EXO_IDOCNUM"" ='" & sDocNumD & "', "
+                                sSQL &= " ""Comments""=CONCAT(""Comments"", '" & sMensaje & "') WHERE ""DocEntry""=" & sDocEntryO & " "
+                                If oObjGlobal.refDi.SQL.executeNonQuery(sSQL) = True Then
+
+                                    oObjGlobal.SBOApp.StatusBar.SetText("(EXO) " & sMensaje, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
+                                    oObjGlobal.SBOApp.MessageBox(sMensaje)
+                                Else
+                                    oObjGlobal.SBOApp.StatusBar.SetText("Error actualizando datos de factura de compra en la factura de venta actual", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                                    Exit Function
+                                End If
+                            End If
+                        Else
+                            sMensaje = "No se ha encontrado la BBDD de destino intercompany. Por favor, verifique la parametrización del Intercompany para generar la factura de compra."
+                            oObjGlobal.SBOApp.StatusBar.SetText("(EXO) - " & sMensaje, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                            oObjGlobal.SBOApp.MessageBox(sMensaje)
+                            Exit Function
+                        End If
+                    Else
+                        sMensaje = "No se ha encontrado el proveedor intercompany. Por favor, verifique la parametrización del Intercompany para generar la factura de compra."
+                        oObjGlobal.SBOApp.StatusBar.SetText("(EXO) - " & sMensaje, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                        oObjGlobal.SBOApp.MessageBox(sMensaje)
+                        Exit Function
+                    End If
+
+                    CrearFacturaCompra = True
+                Else
+                    sMensaje = "No se ha encontrado la empresa Master. Por favor, verifique la parametrización del Intercompany para generar la factura de compra."
+                    oObjGlobal.SBOApp.StatusBar.SetText("(EXO) - " & sMensaje, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                    oObjGlobal.SBOApp.MessageBox(sMensaje)
+                End If
+            End If
+            CrearFacturaCompra = True
+        Catch ex As Exception
+            Throw ex
+        Finally
+#Region "Liberar"
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oCompanyDes, Object))
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oOPCH, Object))
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oRs, Object))
+#End Region
+        End Try
+    End Function
+    Public Shared Function CrearAbonoCompra(ByRef oObjGlobal As EXO_UIAPI.EXO_UIAPI, ByRef oForm As SAPbouiCOM.Form) As Boolean
+#Region "Variables"
+        Dim oORPC As SAPbobsCOM.Documents = Nothing
+        Dim oCompanyDes As SAPbobsCOM.Company = Nothing
+        Dim sCardCodeProv As String = "" : Dim sCardCodeCli As String = "" : Dim sSerieCli As String = ""
+        Dim sDocEntryO As String = "" : Dim sObjTypeO As String = "" : Dim sDocNumO As String = ""
+        Dim sDocEntryD As String = "" : Dim sObjTypeD As String = "" : Dim sDocNumD As String = ""
+        Dim sDocEntryDFAC As String = "" : Dim sObjTypeDFAC As String = "" : Dim sDocNumDFAC As String = ""
+        Dim sBBDDMaster As String = ""
+        Dim sBBDDDestino As String = "" : Dim sUser As String = "" : Dim sPass As String = ""
+        Dim sSQL As String = "" : Dim sMensaje As String = "" : Dim sError As String = ""
+        Dim oRs As SAPbobsCOM.Recordset = Nothing
+        Dim oXml As System.Xml.XmlDocument = New System.Xml.XmlDocument
+        Dim oNodes As System.Xml.XmlNodeList = Nothing
+        Dim oNode As System.Xml.XmlNode = Nothing
+#End Region
+        CrearAbonoCompra = False
+        Try
+            'Buscamos la serie del Abono y comprobamos que sea CI          
+            sSerieCli = Left(oForm.DataSources.DBDataSources.Item("ORIN").GetValue("CardCode", 0).ToString.Trim, 2)
+            If sSerieCli = "CI" Then
+                oRs = CType(oObjGlobal.compañia.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset), SAPbobsCOM.Recordset)
+                sSQL = "SELECT ""U_EXO_BBDD"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""@EXO_IPANELL"" where ""U_EXO_TIPO""='M' "
+                sBBDDMaster = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                If sBBDDMaster <> "" Then
+                    'Buscamos los datos necesarios para realizar el documento
+
+                    'En la empresa donde estoy generando el documento de venta, miro a ver qué proveedor debo coger
+                    sSQL = "SELECT ""U_EXO_PROV"" FROM """ & sBBDDMaster & """.""@EXO_IICL"" WHERE  ""U_EXO_BBDD""='" & oObjGlobal.compañia.CompanyDB & "' "
+                    sCardCodeProv = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                    If sCardCodeProv <> "" Then
+#Region "Datos necesarios"
+                        'Cogemos el cliente con que hemos hecho la factura de ventas y buscamos la empresa donde debemos crear la factura de compra
+                        sCardCodeCli = oForm.DataSources.DBDataSources.Item("ORIN").GetValue("CardCode", 0).ToString.Trim
+                        sDocEntryO = oForm.DataSources.DBDataSources.Item("ORIN").GetValue("DocEntry", 0).ToString.Trim
+                        sDocNumO = oForm.DataSources.DBDataSources.Item("ORIN").GetValue("DocNum", 0).ToString.Trim
+                        sObjTypeO = oForm.DataSources.DBDataSources.Item("ORIN").GetValue("ObjType", 0).ToString.Trim
+                        'Tenemos que mirar cual es la factura de compra para coger los datos de la línea
+                        sDocEntryDFAC = oForm.DataSources.DBDataSources.Item("ORIN").GetValue("U_EXO_IDOCENTRY", 0).ToString.Trim
+                        sObjTypeDFAC = oForm.DataSources.DBDataSources.Item("ORIN").GetValue("U_EXO_IDOCTYPE", 0).ToString.Trim
+                        sDocNumDFAC = oForm.DataSources.DBDataSources.Item("ORIN").GetValue("U_EXO_IDOCNUM", 0).ToString.Trim
+#End Region
+                        sSQL = "SELECT ""U_EXO_BBDD"" FROM """ & sBBDDMaster & """.""@EXO_IICL"" WHERE  ""U_EXO_CLI""='" & sCardCodeCli & "' "
+                        sBBDDDestino = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                        If sBBDDDestino <> "" Then
+                            oObjGlobal.SBOApp.StatusBar.SetText("Conectando con empresa destino...", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                            sSQL = "SELECT ""U_EXO_USER"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""@EXO_IPANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_BBDD""='" & sBBDDDestino & "' "
+                            sUser = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                            sSQL = "SELECT ""U_EXO_PASS"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""@EXO_IPANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_BBDD""='" & sBBDDDestino & "' "
+                            sPass = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                            EXO_CONEXIONES.Connect_Company(oCompanyDes, oObjGlobal, sUser, sPass, sBBDDDestino)
+                            oObjGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". Creando Abono de compra. Proveedor: " & sCardCodeProv, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                            oORPC = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPurchaseCreditNotes), SAPbobsCOM.Documents)
+#Region "Datos Cabecera"
+                            oORPC.CardCode = sCardCodeProv
+                            'comentarios
+                            oORPC.Comments = "Empresa Origen:  " & oObjGlobal.compañia.CompanyDB & vbCrLf & "Tipo Doc.: " & EXO_GLOBALES.Nombre_ObjectType(sObjTypeO) &
+                                             vbCrLf & "Nº Documento: " & sDocNumO
+                            oORPC.UserFields.Fields.Item("U_EXO_IDOCENTRY").Value = sDocEntryO
+                            oORPC.UserFields.Fields.Item("U_EXO_IDOCTYPE").Value = sObjTypeO
+                            oORPC.UserFields.Fields.Item("U_EXO_IDOCNUM").Value = sDocNumO
+                            oORPC.UserFields.Fields.Item("U_EXO_IBBDD").Value = oObjGlobal.compañia.CompanyDB
+                            oORPC.DiscountPercent = EXO_GLOBALES.DblTextToNumber(oCompanyDes, oForm.DataSources.DBDataSources.Item("ORIN").GetValue("DiscPrcnt", 0).ToString.Trim)
+                            Dim dFecha As Date = New Date(CType(Left(oForm.DataSources.DBDataSources.Item("ORIN").GetValue("TaxDate", 0).ToString.Trim, 4), Integer), CType(Mid(oForm.DataSources.DBDataSources.Item("ORIN").GetValue("TaxDate", 0).ToString.Trim, 5, 2), Integer), CType(Right(oForm.DataSources.DBDataSources.Item("ORIN").GetValue("TaxDate", 0).ToString.Trim, 2), Integer))
+                            oORPC.TaxDate = dFecha
+                            dFecha = New Date(CType(Left(oForm.DataSources.DBDataSources.Item("ORIN").GetValue("DocDate", 0).ToString.Trim, 4), Integer), CType(Mid(oForm.DataSources.DBDataSources.Item("ORIN").GetValue("DocDate", 0).ToString.Trim, 5, 2), Integer), CType(Right(oForm.DataSources.DBDataSources.Item("ORIN").GetValue("DocDate", 0).ToString.Trim, 2), Integer))
+                            oORPC.DocDate = dFecha
+                            Select Case oForm.DataSources.DBDataSources.Item("ORIN").GetValue("DocType", 0).ToString.Trim
+                                Case "I" : oORPC.DocType = SAPbobsCOM.BoDocumentTypes.dDocument_Items
+                                Case Else : oORPC.DocType = SAPbobsCOM.BoDocumentTypes.dDocument_Service
+                            End Select
+#End Region
+#Region "Líneas"
+                            sSQL = "SELECT * FROM """ & oObjGlobal.compañia.CompanyDB & """.""RIN1"" WHERE ""DocEntry""=" & sDocEntryO
+                            oRs.DoQuery(sSQL)
+                            oXml.LoadXml(oRs.GetAsXML())
+                            oNodes = oXml.SelectNodes("//row")
+                            'crear lineas lineas
+                            For i As Integer = 0 To oNodes.Count - 1
+                                oNode = oNodes.Item(i)
+                                If i <> 0 Then
+                                    oORPC.Lines.Add()
+                                End If
+
+                                Select Case oForm.DataSources.DBDataSources.Item("ORIN").GetValue("DocType", 0).ToString.Trim
+                                    Case "I"
+                                        If sDocEntryDFAC <> "" Then
+                                            oORPC.Lines.BaseEntry = CType(sDocEntryDFAC, Integer)
+                                            oORPC.Lines.BaseLine = CType(oNode.SelectSingleNode("BaseLine").InnerText, Integer)
+                                            oORPC.Lines.BaseType = CType(sObjTypeDFAC, Integer)
+                                            oORPC.Lines.Quantity = CDbl(oNode.SelectSingleNode("Quantity").InnerText.ToString.Replace(".", ","))
+                                        Else
+                                            oORPC.Lines.ItemCode = oNode.SelectSingleNode("ItemCode").InnerText
+                                            oORPC.Lines.ItemDescription = oNode.SelectSingleNode("Dscription").InnerText
+                                            oORPC.Lines.Quantity = CDbl(oNode.SelectSingleNode("Quantity").InnerText.ToString.Replace(".", ","))
+                                            'precio
+                                            oORPC.Lines.UnitPrice = CDbl(oNode.SelectSingleNode("PriceBefDi").InnerText.ToString.Replace(".", ","))
+                                            'descuento
+                                            oORPC.Lines.DiscountPercent = CDbl(oNode.SelectSingleNode("DiscPrcnt").InnerText.ToString.Replace(".", ","))
+                                        End If
+                                    Case Else
+                                        If sDocEntryDFAC <> "" Then
+                                            oORPC.Lines.BaseEntry = CType(sDocEntryDFAC, Integer)
+                                            oORPC.Lines.BaseLine = CType(oNode.SelectSingleNode("BaseLine").InnerText, Integer)
+                                        Else
+                                            oORPC.Lines.AccountCode = oNode.SelectSingleNode("AcctCode").InnerText
+                                            oORPC.Lines.UnitPrice = CDbl(oNode.SelectSingleNode("Price").InnerText.ToString.Replace(".", ","))
+                                        End If
+                                End Select
+                            Next
+#End Region
+                            If oORPC.Add() <> 0 Then
+                                sError = oCompanyDes.GetLastErrorCode.ToString & " / " & oCompanyDes.GetLastErrorDescription.Replace("'", "")
+                                oObjGlobal.SBOApp.StatusBar.SetText("(EXO) - " & sError, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                                oObjGlobal.SBOApp.MessageBox(sError)
+                                Exit Function
+                            Else
+                                oCompanyDes.GetNewObjectCode(sDocEntryD)
+                                sSQL = "SELECT ""DocNum"" FROM """ & oCompanyDes.CompanyDB & """.""ORPC"" WHERE ""DocEntry""=" & sDocEntryD
+                                sDocNumD = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                                sSQL = "SELECT ""ObjType"" FROM """ & oCompanyDes.CompanyDB & """.""ORPC"" WHERE ""DocEntry""=" & sDocEntryD
+                                sObjTypeD = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                                'udpate
+                                sMensaje = " Empresa Destino: " & oCompanyDes.CompanyDB & vbCrLf & "Tipo Doc.: " & EXO_GLOBALES.Nombre_ObjectType(sObjTypeD) & " - Nº Documento: " & sDocNumD
+                                sSQL = "UPDATE """ & oObjGlobal.compañia.CompanyDB & """.""ORIN"" "
+                                sSQL &= " SET ""U_EXO_IDOCENTRY"" =" & sDocEntryD & ", ""U_EXO_IDOCTYPE""='" & sObjTypeD & "', ""U_EXO_IBBDD"" ='" & sBBDDDestino & "', ""U_EXO_IDOCNUM"" ='" & sDocNumD & "', "
+                                sSQL &= " ""Comments""=CONCAT(""Comments"", " & vbCrLf & "'" & sMensaje & "') WHERE ""DocEntry""=" & sDocEntryO & " "
+                                If oObjGlobal.refDi.SQL.executeNonQuery(sSQL) = True Then
+
+                                    oObjGlobal.SBOApp.StatusBar.SetText("(EXO) " & sMensaje, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
+                                    oObjGlobal.SBOApp.MessageBox(sMensaje)
+                                Else
+                                    oObjGlobal.SBOApp.StatusBar.SetText("Error actualizando datos de Abono de compra en el abono de venta actual", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                                    Exit Function
+                                End If
+                            End If
+                        Else
+                            sMensaje = "No se ha encontrado la BBDD de destino intercompany. Por favor, verifique la parametrización del Intercompany para generar la factura de compra."
+                            oObjGlobal.SBOApp.StatusBar.SetText("(EXO) - " & sMensaje, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                            oObjGlobal.SBOApp.MessageBox(sMensaje)
+                            Exit Function
+                        End If
+                    Else
+                        sMensaje = "No se ha encontrado el proveedor intercompany. Por favor, verifique la parametrización del Intercompany para generar la factura de compra."
+                        oObjGlobal.SBOApp.StatusBar.SetText("(EXO) - " & sMensaje, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                        oObjGlobal.SBOApp.MessageBox(sMensaje)
+                        Exit Function
+                    End If
+                    CrearAbonoCompra = True
+                Else
+                    sMensaje = "No se ha encontrado la empresa Master. Por favor, verifique la parametrización del Intercompany para generar la factura de compra."
+                    oObjGlobal.SBOApp.StatusBar.SetText("(EXO) - " & sMensaje, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                    oObjGlobal.SBOApp.MessageBox(sMensaje)
+                End If
+            End If
+            CrearAbonoCompra = True
+        Catch ex As Exception
+            Throw ex
+        Finally
+#Region "Liberar"
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oCompanyDes, Object))
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oORPC, Object))
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oRs, Object))
+#End Region
+        End Try
+    End Function
+    Public Shared Function CancelarFacturaCompra(ByRef oObjGlobal As EXO_UIAPI.EXO_UIAPI, ByRef oForm As SAPbouiCOM.Form) As Boolean
+#Region "Variables"
+        Dim oOPCH As SAPbobsCOM.Documents = Nothing : Dim oOPCHCancel As SAPbobsCOM.Documents = Nothing
+        Dim oCompanyDes As SAPbobsCOM.Company = Nothing
+        Dim sCardCodeProv As String = "" : Dim sCardCodeCli As String = "" : Dim sSerieCli As String = ""
+        Dim sDocEntryO As String = "" : Dim sObjTypeO As String = "" : Dim sDocNumO As String = ""
+        Dim sDocEntryD As String = "" : Dim sObjTypeD As String = "" : Dim sDocNumD As String = ""
+        Dim sDocEntryDFAC As String = "" : Dim sObjTypeDFAC As String = "" : Dim sDocNumDFAC As String = ""
+        Dim sBBDDMaster As String = ""
+        Dim sBBDDDestino As String = "" : Dim sUser As String = "" : Dim sPass As String = ""
+        Dim sSQL As String = "" : Dim sMensaje As String = "" : Dim sError As String = ""
+        Dim oRs As SAPbobsCOM.Recordset = Nothing
+        Dim oXml As System.Xml.XmlDocument = New System.Xml.XmlDocument
+        Dim oNodes As System.Xml.XmlNodeList = Nothing
+        Dim oNode As System.Xml.XmlNode = Nothing
+#End Region
+
+        CancelarFacturaCompra = False
+        Try
+            'Buscamos la serie de la factura y comprobamos que sea CI            
+            sSerieCli = Left(oForm.DataSources.DBDataSources.Item("OINV").GetValue("CardCode", 0).ToString.Trim, 2)
+            If sSerieCli.Trim = "CI" Then
+                oRs = CType(oObjGlobal.compañia.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset), SAPbobsCOM.Recordset)
+                sSQL = "SELECT ""U_EXO_BBDD"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""@EXO_IPANELL"" where ""U_EXO_TIPO""='M' "
+                sBBDDMaster = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                If sBBDDMaster <> "" Then
+                    'Buscamos los datos necesarios para realizar el documento
+
+                    'En la empresa donde estoy generando el documento de venta, miro a ver qué proveedor debo coger
+                    sSQL = "SELECT ""U_EXO_PROV"" FROM """ & sBBDDMaster & """.""@EXO_IICL"" WHERE  ""U_EXO_BBDD""='" & oObjGlobal.compañia.CompanyDB & "' "
+                    sCardCodeProv = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                    If sCardCodeProv <> "" Then
+#Region "Datos necesarios"
+                        'Cogemos el cliente con que hemos hecho la factura de ventas y buscamos la empresa donde debemos crear la factura de compra
+                        sCardCodeCli = oForm.DataSources.DBDataSources.Item("OINV").GetValue("CardCode", 0).ToString.Trim
+                        sDocEntryO = oForm.DataSources.DBDataSources.Item("OINV").GetValue("DocEntry", 0).ToString.Trim
+                        sDocNumO = oForm.DataSources.DBDataSources.Item("OINV").GetValue("DocNum", 0).ToString.Trim
+                        sObjTypeO = oForm.DataSources.DBDataSources.Item("OINV").GetValue("ObjType", 0).ToString.Trim
+                        'Tenemos que mirar cual es la factura de compra para coger los datos de la línea
+                        sDocEntryDFAC = oForm.DataSources.DBDataSources.Item("OINV").GetValue("U_EXO_IDOCENTRY", 0).ToString.Trim
+                        sObjTypeDFAC = oForm.DataSources.DBDataSources.Item("OINV").GetValue("U_EXO_IDOCTYPE", 0).ToString.Trim
+                        sDocNumDFAC = oForm.DataSources.DBDataSources.Item("OINV").GetValue("U_EXO_IDOCNUM", 0).ToString.Trim
+
+                        sSQL = "Select ""U_EXO_BBDD"" FROM """ & sBBDDMaster & """.""@EXO_IICL"" WHERE  ""U_EXO_CLI""='" & sCardCodeCli & "' "
+#End Region
+                        sBBDDDestino = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                        If sBBDDDestino <> "" Then
+                            oObjGlobal.SBOApp.StatusBar.SetText("Conectando con empresa destino...", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                            sSQL = "SELECT ""U_EXO_USER"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""@EXO_IPANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_BBDD""='" & sBBDDDestino & "' "
+                            sUser = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                            sSQL = "SELECT ""U_EXO_PASS"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""@EXO_IPANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_BBDD""='" & sBBDDDestino & "' "
+                            sPass = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                            EXO_CONEXIONES.Connect_Company(oCompanyDes, oObjGlobal, sUser, sPass, sBBDDDestino)
+                            oObjGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". Creando factura de compra. Proveedor: " & sCardCodeProv, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                            oOPCH = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPurchaseInvoices), SAPbobsCOM.Documents)
+                            oOPCHCancel = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPurchaseInvoices), SAPbobsCOM.Documents)
+                            If oOPCH.GetByKey(CType(sDocEntryDFAC, Integer)) = True Then
+                                oOPCHCancel = oOPCH.CreateCancellationDocument()
+                                oOPCHCancel.Comments = "Empresa Origen:  " & oObjGlobal.compañia.CompanyDB & vbCrLf & "Tipo Doc. Cancelado: " & EXO_GLOBALES.Nombre_ObjectType(sObjTypeO) &
+                                             vbCrLf & "Nº Documento: " & sDocNumO
+                                'oOPCHCancel.UserFields.Fields.Item("U_EXO_IDOCENTRY").Value = sDocEntryO
+                                'oOPCHCancel.UserFields.Fields.Item("U_EXO_IDOCTYPE").Value = sObjTypeO
+                                'oOPCHCancel.UserFields.Fields.Item("U_EXO_IDOCNUM").Value = sDocNumO
+                                'oOPCHCancel.UserFields.Fields.Item("U_EXO_IBBDD").Value = oObjGlobal.compañia.CompanyDB
+
+                                If oOPCHCancel.Add() <> 0 Then
+                                    sError = oCompanyDes.GetLastErrorCode.ToString & " / " & oCompanyDes.GetLastErrorDescription.Replace("'", "")
+                                    oObjGlobal.SBOApp.StatusBar.SetText("(EXO) - " & sError, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                                    oObjGlobal.SBOApp.MessageBox(sError)
+                                    Exit Function
+                                Else
+                                    oCompanyDes.GetNewObjectCode(sDocEntryD)
+                                    sSQL = "SELECT ""DocNum"" FROM """ & oCompanyDes.CompanyDB & """.""OPCH"" WHERE ""DocEntry""=" & sDocEntryD
+                                    sDocNumD = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                                    sSQL = "SELECT ""ObjType"" FROM """ & oCompanyDes.CompanyDB & """.""OPCH"" WHERE ""DocEntry""=" & sDocEntryD
+                                    sObjTypeD = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                                    'UPdate en destino, ya que no deja actualizaciones de campos de usuario
+                                    sSQL = "UPDATE """ & oCompanyDes.CompanyDB & """.""OINV"" "
+                                    sSQL &= " SET ""U_EXO_IDOCENTRY"" =" & sDocEntryO & ", ""U_EXO_IDOCTYPE""='" & sObjTypeO & "', ""U_EXO_IBBDD"" ='" & oObjGlobal.compañia.CompanyDB & "', ""U_EXO_IDOCNUM"" ='" & sDocNumO & "' "
+                                    sSQL &= "  WHERE ""DocEntry""=" & sDocEntryO & " "
+                                    If oObjGlobal.refDi.SQL.executeNonQuery(sSQL) = True Then
+                                    Else
+                                        oObjGlobal.SBOApp.StatusBar.SetText("Error actualizando datos de la cancelación de factura de compra.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                                        Exit Function
+                                    End If
+                                    'udpate
+                                    sMensaje = " Empresa Destino: " & oCompanyDes.CompanyDB & vbCrLf & "Tipo Doc. Cancelado: " & EXO_GLOBALES.Nombre_ObjectType(sObjTypeD) & " - Nº Documento: " & sDocNumD
+                                    sSQL = "UPDATE """ & oObjGlobal.compañia.CompanyDB & """.""OINV"" "
+                                    sSQL &= " SET ""U_EXO_IDOCENTRY"" =" & sDocEntryD & ", ""U_EXO_IDOCTYPE""='" & sObjTypeD & "', ""U_EXO_IBBDD"" ='" & sBBDDDestino & "', ""U_EXO_IDOCNUM"" ='" & sDocNumD & "', "
+                                    sSQL &= " ""Comments""=CONCAT(""Comments"",  " & vbCrLf & "'" & sMensaje & "') WHERE ""DocEntry""=" & sDocEntryO & " "
+                                    If oObjGlobal.refDi.SQL.executeNonQuery(sSQL) = True Then
+                                        oObjGlobal.SBOApp.StatusBar.SetText("(EXO) " & sMensaje, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
+                                        oObjGlobal.SBOApp.MessageBox(sMensaje)
+                                    Else
+                                        oObjGlobal.SBOApp.StatusBar.SetText("Error actualizando datos de factura de compra en la factura de venta actual", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                                        Exit Function
+                                    End If
+                                End If
+
+                            Else
+                                oObjGlobal.SBOApp.StatusBar.SetText("Error Cancelando la factura de proveedor Nº" & sDocNumDFAC, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                                Exit Function
+                            End If
+                        Else
+                            sMensaje = "No se ha encontrado la BBDD de destino intercompany. Por favor, verifique la parametrización del Intercompany para generar la factura de compra."
+                            oObjGlobal.SBOApp.StatusBar.SetText("(EXO) - " & sMensaje, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                            oObjGlobal.SBOApp.MessageBox(sMensaje)
+                            Exit Function
+                        End If
+                    Else
+                        sMensaje = "No se ha encontrado el proveedor intercompany. Por favor, verifique la parametrización del Intercompany para generar la factura de compra."
+                        oObjGlobal.SBOApp.StatusBar.SetText("(EXO) - " & sMensaje, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                        oObjGlobal.SBOApp.MessageBox(sMensaje)
+                        Exit Function
+                    End If
+
+                    CancelarFacturaCompra = True
+                Else
+                    sMensaje = "No se ha encontrado la empresa Master. Por favor, verifique la parametrización del Intercompany para generar la factura de compra."
+                    oObjGlobal.SBOApp.StatusBar.SetText("(EXO) - " & sMensaje, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                    oObjGlobal.SBOApp.MessageBox(sMensaje)
+                End If
+            End If
+            CancelarFacturaCompra = True
+        Catch ex As Exception
+            Throw ex
+        Finally
+#Region "Liberar"
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oCompanyDes, Object))
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oOPCH, Object))
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oRs, Object))
+#End Region
+        End Try
+    End Function
+
+#Region "Procesos de aprobación"
+    Public Shared Function Sincroniza_User_Master(ByRef oUser As SAPbobsCOM.Users, ByRef oCompanyDes As SAPbobsCOM.Company, ByRef oObjGlobal As EXO_UIAPI.EXO_UIAPI) As Boolean
+#Region "Varibales"
+        Dim oUser_Destino As SAPbobsCOM.Users = Nothing
+        Dim bExiste As Boolean = False
+        Dim sSQL As String = ""
+        Dim sUsuarioDes As String = "" : Dim sCodUsuarioOrigen As String = ""
+#End Region
+        Sincroniza_User_Master = False
+        Try
+            sSQL = "SELECT ""USERID"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" WHERE ""USER_CODE""='" & oUser.UserCode & "'"
+            sCodUsuarioOrigen = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+
+            oUser_Destino = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oUsers), SAPbobsCOM.Users)
+            'Buscamos el código de usuario
+            sSQL = "SELECT ""USERID"" FROM """ & oCompanyDes.CompanyDB & """.""OUSR"" WHERE ""USER_CODE""='" & oUser.UserCode & "'"
+            Dim sCodUSR As String = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+            If sCodUSR <> "" Then
+                If oUser_Destino.GetByKey(CType(sCodUSR, Integer)) = True Then
+                    bExiste = True
+                Else
+                    bExiste = False
+                End If
+            Else
+                bExiste = False
+            End If
+
+
+            oUser_Destino.UserCode = oUser.UserCode
+            oUser_Destino.UserName = oUser.UserName
+            oUser_Destino.LanguageCode = oUser.LanguageCode
+
+            oUser_Destino.Branch = oUser.Branch
+            oUser_Destino.CashLimit = oUser.CashLimit
+            oUser_Destino.Defaults = oUser.Defaults
+            oUser_Destino.Department = oUser.Department
+            oUser_Destino.eMail = oUser.eMail
+            oUser_Destino.FaxNumber = oUser.FaxNumber
+            oUser_Destino.Locked = oUser.Locked
+            oUser_Destino.MaxDiscountGeneral = oUser.MaxDiscountGeneral
+            oUser_Destino.MaxDiscountPurchase = oUser.MaxDiscountPurchase
+            oUser_Destino.MaxDiscountSales = oUser.MaxDiscountSales
+            oUser_Destino.MobilePhoneNumber = oUser.MobilePhoneNumber
+            oUser_Destino.Superuser = oUser.Superuser
+            If bExiste = False Then
+                oUser_Destino.UserPassword = "Osma@2015"
+            End If
+            'If oUser.Superuser = SAPbobsCOM.BoYesNoEnum.tNO Then
+            '    For i = 0 To oUser.UserPermission.Count - 1
+            '        oUser.UserPermission.SetCurrentLine(0)
+            '        oUser_Destino.UserPermission.Add()
+            '        oUser_Destino.UserPermission.PermissionID = oUser.UserPermission.PermissionID
+            '        oUser_Destino.UserPermission.Permission = oUser.UserPermission.Permission
+            '    Next
+            'End If
+
+            For i = 0 To oUser_Destino.UserGroupByUser.Count - 1
+                oUser_Destino.UserGroupByUser.SetCurrentLine(0)
+                oUser_Destino.UserGroupByUser.Delete()
+            Next
+            'For i = 0 To oUser.UserGroupByUser.Count - 1
+            '    oUser.UserGroupByUser.SetCurrentLine(i)
+            '    oUser_Destino.UserGroupByUser.Add()
+            '    oUser_Destino.UserGroupByUser.GroupId = oUser.UserGroupByUser.GroupId
+            '    oUser_Destino.UserGroupByUser.DueDate = oUser.UserGroupByUser.DueDate
+            '    oUser_Destino.UserGroupByUser.StartDate = oUser.UserGroupByUser.StartDate
+            'Next
+
+            If bExiste = True Then
+                If oUser_Destino.Update() <> 0 Then
+                    oObjGlobal.SBOApp.StatusBar.SetText("Error actualizando Usuario - " & oUser.UserCode & " - " & oUser.UserName & " - " &
+                                                                oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                Else
+                    oObjGlobal.SBOApp.StatusBar.SetText("Usuario Actualizado - " & oUser.UserCode & " - " & oUser.UserName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
+                    oCompanyDes.GetNewObjectCode(sUsuarioDes)
+                End If
+            Else
+                If oUser_Destino.Add() <> 0 Then
+                    oObjGlobal.SBOApp.StatusBar.SetText("Error creando Usuario - " & oUser.UserCode & " - " & oUser.UserName & " - " &
+                                                                oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                Else
+                    oObjGlobal.SBOApp.StatusBar.SetText("Usuario creado - " & oUser.UserCode & " - " & oUser.UserName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
+                    oCompanyDes.GetNewObjectCode(sUsuarioDes)
+                End If
+            End If
+
+            If sUsuarioDes <> "" Then
+                'Actualizamos datos del usuario
+
+                sSQL = "INSERT INTO """ & oCompanyDes.CompanyDB & """.""USR7"" "
+                sSQL &= "SELECT " & sUsuarioDes & ", ""GroupId"", ""Category"", ""StartDate"", ""DueDate"" "
+                sSQL &= "FROM """ & oObjGlobal.compañia.CompanyDB & """.""USR7"" t0  "
+                sSQL &= " WHERE t0.""UserId"" = " & sCodUsuarioOrigen & "; "
+                If oObjGlobal.refDi.SQL.executeNonQuery(sSQL) <> True Then
+                    oObjGlobal.SBOApp.StatusBar.SetText("Error al actualizar los grupos del usuario " & oUser.UserCode & " - " & oUser.UserName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                    Exit Function
+                End If
+
+                'Actualizamos datos del usuario
+                sSQL = "UPDATE """ & oCompanyDes.CompanyDB & """.""OUSR"" "
+                sSQL &= " SET ""MobileUser""=(SELECT ""MobileUser"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
+                sSQL &= " ""MobileIMEI""=(SELECT ""MobileIMEI"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
+                sSQL &= " ""CheckFiles""=(SELECT ""CheckFiles"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
+                sSQL &= " ""DsplyRates""=(SELECT ""DsplyRates"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
+                sSQL &= " ""RcrFlag""=(SELECT ""RcrFlag"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
+                sSQL &= " ""RclFlag""=(SELECT ""RclFlag"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
+                sSQL &= " ""ContactLog""=(SELECT ""ContactLog"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
+                sSQL &= " ""ShowNewMsg""=(SELECT ""ShowNewMsg"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
+                sSQL &= " ""OpenCdt""=(SELECT ""OpenCdt"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
+                sSQL &= " ""OpenDps""=(SELECT ""OpenDps"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
+                sSQL &= " ""ShowNewTsk""=(SELECT ""ShowNewTsk"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
+                sSQL &= " ""AlertPolFr""=(SELECT ""AlertPolFr"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
+                sSQL &= " ""ScreenLock""=(SELECT ""ScreenLock"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
+                sSQL &= " ""OpenCredit""=(SELECT ""OpenCredit"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
+                sSQL &= " ""PwdNeverEx""='Y' "
+                If bExiste = False Then
+                    sSQL &= ", ""OneLogPwd""='Y' "
+                End If
+                sSQL &= " WHERE ""USERID"" = " & sUsuarioDes & "; "
+                If oObjGlobal.refDi.SQL.executeNonQuery(sSQL) <> True Then
+                    oObjGlobal.SBOApp.StatusBar.SetText("Error al actualizar Datos del usuario " & oUser.UserCode & " - " & oUser.UserName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                    Exit Function
+                End If
+
+            End If
+            Sincroniza_User_Master = True
+        Catch ex As Exception
+            Throw ex
+        Finally
+#Region "Liberar"
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oUser_Destino, Object))
+#End Region
+        End Try
+    End Function
+    Public Shared Function Sincroniza_Etapa_Autorización_Master(ByRef oApprovalStage As SAPbobsCOM.ApprovalStage, ByRef oCompanyDes As SAPbobsCOM.Company, ByRef oObjGlobal As EXO_UIAPI.EXO_UIAPI) As Boolean
+#Region "Varibales"
+        Dim bExiste As Boolean = False : Dim sExiste As String = ""
+        Dim sSQL As String = ""
+        Dim oCmpSrv_Des As SAPbobsCOM.CompanyService = Nothing
+        Dim oApprovalStage_Des As SAPbobsCOM.ApprovalStage = Nothing : Dim oApprovalStagesService_Des As SAPbobsCOM.ApprovalStagesService = Nothing
+        Dim oApprovalStageParams_Des As SAPbobsCOM.ApprovalStageParams = Nothing
+        Dim oApprovalStageApprovers_des As SAPbobsCOM.ApprovalStageApprovers = Nothing : Dim oApprovalStageApprovers As SAPbobsCOM.ApprovalStageApprovers = Nothing
+        Dim oApprover_des As SAPbobsCOM.ApprovalStageApprover = Nothing
+
+        Dim sUser As String = "" : Dim sNRechazo As String = ""
+#End Region
+        Sincroniza_Etapa_Autorización_Master = False
+        Try
+            sSQL = "SELECT ""MaxRejReqr"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OWST"" where ""Name""='" & oApprovalStage.Name.ToString & "' "
+            sNRechazo = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+            sSQL = "SELECT ""WstCode"" FROM """ & oCompanyDes.CompanyDB & """.""OWST"" where ""Name""='" & oApprovalStage.Name.ToString & "' "
+            sExiste = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+            oCmpSrv_Des = oCompanyDes.GetCompanyService()
+            oApprovalStagesService_Des = CType(oCmpSrv_Des.GetBusinessService(SAPbobsCOM.ServiceTypes.ApprovalStagesService), SAPbobsCOM.ApprovalStagesService)
+            oApprovalStage_Des = CType(oApprovalStagesService_Des.GetDataInterface(SAPbobsCOM.ApprovalStagesServiceDataInterfaces.assdiApprovalStage), SAPbobsCOM.ApprovalStage)
+            oApprovalStageParams_Des = CType(oApprovalStagesService_Des.GetDataInterface(SAPbobsCOM.ApprovalStagesServiceDataInterfaces.assdiApprovalStageParams), SAPbobsCOM.ApprovalStageParams)
+
+            If sExiste <> "" Then
+                oApprovalStageParams_Des.Code = CType(sExiste, Integer)
+
+                oObjGlobal.SBOApp.StatusBar.SetText("Actualizando Etapa...", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                'Remove an existing Approval Stage
+                Call oApprovalStagesService_Des.RemoveApprovalStage(oApprovalStageParams_Des)
+
+            End If
+
+            oApprovalStage_Des.Name = oApprovalStage.Name
+            oApprovalStage_Des.Remarks = oApprovalStage.Remarks
+            oApprovalStageApprovers_des = oApprovalStage_Des.ApprovalStageApprovers
+            'Copiamos los usuarios
+            oApprovalStageApprovers = oApprovalStage.ApprovalStageApprovers
+            For i = 0 To oApprovalStageApprovers.Count - 1
+                oApprover_des = oApprovalStageApprovers_des.Add
+                sSQL = "SELECT ""USERID"" FROM """ & oCompanyDes.CompanyDB & """.""OUSR"" WHERE ""USER_CODE""=(SELECT ""USER_CODE"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" WHERE ""USERID""='" & oApprovalStageApprovers.Item(i).UserID & " ')"
+                sUser = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                oApprover_des.UserID = CType(sUser, Integer)
+            Next
+            oApprovalStage_Des.NoOfApproversRequired = oApprovalStage.NoOfApproversRequired
+            oApprovalStageParams_Des = oApprovalStagesService_Des.AddApprovalStage(oApprovalStage_Des)
+
+            'El numero de rechazos no lo tiene en el objeto, por lo que lo actualizamos con UPDATE
+            If sNRechazo <> "" Then
+                sSQL = "UPDATE """ & oCompanyDes.CompanyDB & """.""OWST"" SET ""MaxRejReqr""=" & sNRechazo
+                sSQL &= " where ""Name""='" & oApprovalStage.Name.ToString & "' "
+                If oObjGlobal.refDi.SQL.executeNonQuery(sSQL) = False Then
+
+                End If
+            End If
+            Sincroniza_Etapa_Autorización_Master = True
+        Catch ex As Exception
+            Throw ex
+        Finally
+#Region "Liberar"
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oApprovalStageParams_Des, Object))
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oApprovalStage_Des, Object))
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oCmpSrv_Des, Object))
+#End Region
+        End Try
+    End Function
+
+    Public Shared Function Sincroniza_Modelo_Autorización_Master(ByRef oApprovalTemplate As SAPbobsCOM.ApprovalTemplate, ByRef oCompanyDes As SAPbobsCOM.Company, ByRef oObjGlobal As EXO_UIAPI.EXO_UIAPI) As Boolean
+#Region "Variables"
+        Dim bExiste As Boolean = False : Dim sExiste As String = ""
+        Dim sSQL As String = ""
+        Dim oCmpSrvDes As SAPbobsCOM.CompanyService = Nothing
+        Dim oApprovalTemplateServiceDes As SAPbobsCOM.ApprovalTemplatesService = Nothing
+        Dim oApprovalTemplateDes As SAPbobsCOM.ApprovalTemplate = Nothing
+        Dim oApprovalTemplateParamsDes As SAPbobsCOM.ApprovalTemplateParams = Nothing
+        Dim oApprovalTemplateTermDes As SAPbobsCOM.ApprovalTemplateTerm = Nothing
+#End Region
+        Sincroniza_Modelo_Autorización_Master = False
+        Try
+            sSQL = "SELECT ""WtmCode"" FROM """ & oCompanyDes.CompanyDB & """.""OWTM"" where ""Name""='" & oApprovalTemplate.Name.ToString & "' "
+            sExiste = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+            oCmpSrvDes = oCompanyDes.GetCompanyService()
+            oApprovalTemplateServiceDes = CType(oCmpSrvDes.GetBusinessService(SAPbobsCOM.ServiceTypes.ApprovalTemplatesService), SAPbobsCOM.ApprovalTemplatesService)
+            oApprovalTemplateDes = CType(oApprovalTemplateServiceDes.GetDataInterface(SAPbobsCOM.ApprovalTemplatesServiceDataInterfaces.atsdiApprovalTemplate), SAPbobsCOM.ApprovalTemplate)
+            oApprovalTemplateParamsDes = CType(oApprovalTemplateServiceDes.GetDataInterface(SAPbobsCOM.ApprovalTemplatesServiceDataInterfaces.atsdiApprovalTemplateParams), SAPbobsCOM.ApprovalTemplateParams)
+
+            If sExiste <> "" Then
+                oApprovalTemplateParamsDes.Code = CType(sExiste, Integer)
+
+                oObjGlobal.SBOApp.StatusBar.SetText("Actualizando Modelo...", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                'Remove an existing Approval Stage
+                Call oApprovalTemplateServiceDes.RemoveApprovalTemplate(oApprovalTemplateParamsDes)
+
+            End If
+
+            oApprovalTemplateDes.Name = oApprovalTemplate.Name
+            oApprovalTemplateDes.Remarks = oApprovalTemplate.Remarks
+            Select Case oApprovalTemplateDes.IsActive
+                Case SAPbobsCOM.BoYesNoEnum.tNO : oApprovalTemplateDes.IsActive = SAPbobsCOM.BoYesNoEnum.tNO
+                Case SAPbobsCOM.BoYesNoEnum.tYES : oApprovalTemplateDes.IsActive = SAPbobsCOM.BoYesNoEnum.tYES
+            End Select
+
+            Select Case oApprovalTemplateDes.IsActiveWhenUpdatingDocuments
+                Case SAPbobsCOM.BoYesNoEnum.tNO : oApprovalTemplateDes.IsActiveWhenUpdatingDocuments = SAPbobsCOM.BoYesNoEnum.tNO
+                Case SAPbobsCOM.BoYesNoEnum.tYES : oApprovalTemplateDes.IsActiveWhenUpdatingDocuments = SAPbobsCOM.BoYesNoEnum.tYES
+            End Select
+
+#Region "Pestaña Autor"
+            For i = 0 To oApprovalTemplate.ApprovalTemplateUsers.Count - 1
+                'Los usuarios tenemos que buscarlos para saber el nombre
+                Dim iUsuarioOrigen As Integer = 0 : Dim sUsuarioNameOrigen As String = "" : Dim iUsuarioDes As Integer = 0
+                'Aqui tenemos que buscar el nombre de la etapa en el origen
+                iUsuarioOrigen = oApprovalTemplate.ApprovalTemplateUsers.Item(i).UserID
+                sSQL = "SELECT ""USER_CODE"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR""  WHERE ""USERID""=" & iUsuarioOrigen
+                sUsuarioNameOrigen = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+
+                'Buscamos el codigo en la empresa destino
+                sSQL = "SELECT ""USERID"" FROM """ & oCompanyDes.CompanyDB & """.""OUSR""  WHERE ""USER_CODE""='" & sUsuarioNameOrigen.ToString & "' "
+                iUsuarioDes = CType(oObjGlobal.refDi.SQL.sqlStringB1(sSQL), Integer)
+                oApprovalTemplateDes.ApprovalTemplateUsers.Add.UserID = iUsuarioDes
+            Next
+#End Region
+#Region "Pestaña Documentos"
+            For i = 0 To oApprovalTemplate.ApprovalTemplateDocuments.Count - 1
+                oApprovalTemplateDes.ApprovalTemplateDocuments.Add.DocumentType = oApprovalTemplate.ApprovalTemplateDocuments.Item(i).DocumentType
+            Next
+#End Region
+#Region "Pestaña Etapas - Son los modelos"
+            For i = 0 To oApprovalTemplate.ApprovalTemplateStages.Count - 1
+                Dim iModeloAprobacionOrigen As Integer = 0 : Dim sModeloAprobaciónNameOrigen As String = "" : Dim iMOdeloAprobacionDes As Integer = 0
+                'Aqui tenemos que buscar el nombre de la etapa en el origen
+                iModeloAprobacionOrigen = oApprovalTemplate.ApprovalTemplateStages.Item(i).ApprovalStageCode
+                sSQL = "SELECT ""Name"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OWST""  WHERE ""WstCode""=" & iModeloAprobacionOrigen.ToString
+                sModeloAprobaciónNameOrigen = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+
+                'Buscamos por el nombre el código de la etapa
+                sSQL = "SELECT ""WstCode"" FROM """ & oCompanyDes.CompanyDB & """.""OWST""  WHERE ""Name""='" & sModeloAprobaciónNameOrigen.ToString & "' "
+                iMOdeloAprobacionDes = CType(oObjGlobal.refDi.SQL.sqlStringB1(sSQL), Integer)
+                oApprovalTemplateDes.ApprovalTemplateStages.Add.ApprovalStageCode = iMOdeloAprobacionDes
+            Next
+#End Region
+#Region "Pestaña Condiciones"
+            oApprovalTemplateDes.UseTerms = oApprovalTemplate.UseTerms
+            For i = 0 To oApprovalTemplate.ApprovalTemplateTerms.Count - 1
+                oApprovalTemplateTermDes = oApprovalTemplateDes.ApprovalTemplateTerms.Add
+                oApprovalTemplateTermDes.ConditionType = oApprovalTemplate.ApprovalTemplateTerms.Item(i).ConditionType
+                oApprovalTemplateTermDes.OperationType = oApprovalTemplate.ApprovalTemplateTerms.Item(i).OperationType
+                oApprovalTemplateTermDes.Value = oApprovalTemplate.ApprovalTemplateTerms.Item(i).Value
+            Next
+
+            For i = 0 To oApprovalTemplate.ApprovalTemplateQueries.Count - 1
+                Dim iQueriIDOrigen As Integer = oApprovalTemplate.ApprovalTemplateQueries.Item(i).QueryID
+                'Tenemos que buscar la query a ver si existe... 
+                sSQL = "SELECT ""QName"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUQR"" Where ""IntrnalKey""=" & iQueriIDOrigen.ToString
+                Dim sQueryNameOrigen As String = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                'Tenemos que buscar la categoría de la Query a ver si existe... 
+                sSQL = "SELECT ""QCategory"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUQR"" Where ""IntrnalKey""=" & iQueriIDOrigen.ToString
+                Dim sQueryCategoryOrigen As String = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                sSQL = "SELECT ""CatName"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OQCN"" Where ""CategoryId""=" & sQueryCategoryOrigen
+                Dim sQueryCategoryNameOrigen = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                ' Si no existe la creamos
+                sSQL = "SELECT ""IntrnalKey"" FROM """ & oCompanyDes.CompanyDB & """.""OUQR"" Where ""QName""='" & sQueryNameOrigen & "' "
+                Dim sQueriIDDestino As String = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                If sQueriIDDestino = "" Then
+                    If EXO_GLOBALES.CrearQuery_Master(sQueriIDDestino, iQueriIDOrigen, sQueryCategoryOrigen, sQueryCategoryNameOrigen, oCompanyDes, oObjGlobal) = False Then
+                        oObjGlobal.SBOApp.StatusBar.SetText("No se ha podido crear la Query Asignada: " & sQueryNameOrigen, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                        Return False
+                    End If
+                End If
+                'Asignamos query
+                oApprovalTemplateDes.ApprovalTemplateQueries.Add.QueryID = CType(sQueriIDDestino, Integer)
+            Next
+#End Region
+            oApprovalTemplateParamsDes = oApprovalTemplateServiceDes.AddApprovalTemplate(oApprovalTemplateDes)
+            Sincroniza_Modelo_Autorización_Master = True
+        Catch ex As Exception
+            Throw ex
+        Finally
+#Region "Liberar"
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oApprovalTemplateParamsDes, Object))
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oApprovalTemplateDes, Object))
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oCmpSrvDes, Object))
+#End Region
+        End Try
+    End Function
+
+    Public Shared Function CrearQuery_Master(ByRef sQueriIDDestino As String, ByVal iQueriIDOrigen As Integer, ByVal sQueryCategoryOrigen As String, ByVal sQueryCategoryNameOrigen As String,
+            ByRef oCompanyDes As SAPbobsCOM.Company, ByRef oObjGlobal As EXO_UIAPI.EXO_UIAPI) As Boolean
+#Region "Variables"
+        Dim sboUserQueryCatOrigen As SAPbobsCOM.QueryCategories = Nothing : Dim sboUserQueryCatDes As SAPbobsCOM.QueryCategories = Nothing
+        Dim sSQL As String = ""
+        Dim sIDCatDes As String = ""
+        Dim sError As String = ""
+        Dim oUQOrigen As SAPbobsCOM.UserQueries = Nothing : Dim oUQDes As SAPbobsCOM.UserQueries = Nothing
+#End Region
+        Try
+            CrearQuery_Master = False
+#Region "Categoria de la Query"
+            'Buscamos si existe la categoría de la Query
+            sSQL = "SELECT ""CategoryId"" FROM """ & oCompanyDes.CompanyDB & """.""OQCN"" Where ""CatName""='" & sQueryCategoryNameOrigen & "' "
+            sIDCatDes = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+            'Creamos la categoría
+            If sIDCatDes = "" Then
+                sboUserQueryCatOrigen = CType(oObjGlobal.compañia.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oQueryCategories), SAPbobsCOM.QueryCategories)
+                If sboUserQueryCatOrigen.GetByKey(CType(sQueryCategoryOrigen, Integer)) = True Then
+                    sboUserQueryCatDes = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oQueryCategories), SAPbobsCOM.QueryCategories)
+                    With sboUserQueryCatDes
+                        .Name = sboUserQueryCatOrigen.Name
+                        .Permissions = sboUserQueryCatOrigen.Permissions
+                        If .Add() <> 0 Then
+                            sError = oCompanyDes.GetLastErrorCode.ToString & " / " & oCompanyDes.GetLastErrorDescription.Replace("'", "")
+                            oObjGlobal.SBOApp.StatusBar.SetText("(EXO) - " & sError, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                            Exit Function
+                        Else
+                            oCompanyDes.GetNewObjectCode(sIDCatDes)
+                        End If
+                    End With
+                Else
+                    oObjGlobal.SBOApp.StatusBar.SetText("Error inesperado. No se encuentra la categoría de la query: " & sQueryCategoryNameOrigen, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                    Return False
+                End If
+            End If
+#End Region
+#Region "Creación de la query"
+            oUQOrigen = CType(oObjGlobal.compañia.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oUserQueries), SAPbobsCOM.UserQueries)
+            If oUQOrigen.GetByKey(iQueriIDOrigen, CType(sQueryCategoryOrigen, Integer)) = True Then
+                oUQDes = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oUserQueries), SAPbobsCOM.UserQueries)
+                oUQDes.ProcedureAlias = oUQOrigen.ProcedureAlias
+                oUQDes.ProcedureName = oUQOrigen.ProcedureName
+                oUQDes.Query = oUQOrigen.Query
+                oUQDes.QueryCategory = CType(sIDCatDes, Integer)
+                oUQDes.QueryDescription = oUQOrigen.QueryDescription
+                oUQDes.QueryType = oUQOrigen.QueryType
+                If oUQDes.Add() <> 0 Then
+                    sError = oCompanyDes.GetLastErrorCode.ToString & " / " & oCompanyDes.GetLastErrorDescription.Replace("'", "")
+                    oObjGlobal.SBOApp.StatusBar.SetText("(EXO) - " & sError, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                    Exit Function
+                Else
+                    oCompanyDes.GetNewObjectCode(sQueriIDDestino)
+                End If
+            Else
+                oObjGlobal.SBOApp.StatusBar.SetText("Error inesperado. No se encuentra la query Nº: " & iQueriIDOrigen, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                Return False
+            End If
+#End Region
+
+            CrearQuery_Master = True
+        Catch ex As Exception
+            Throw ex
+        Finally
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(sboUserQueryCatOrigen, Object))
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(sboUserQueryCatDes, Object))
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oUQOrigen, Object))
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oUQDes, Object))
+        End Try
+    End Function
+#End Region
 End Class
