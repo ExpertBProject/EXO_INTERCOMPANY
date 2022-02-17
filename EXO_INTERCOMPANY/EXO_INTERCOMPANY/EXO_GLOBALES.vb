@@ -856,7 +856,16 @@ Public Class EXO_GLOBALES
 #End Region
 
             If sExiste_IC = False Then
-                If sSerie = "CI" Or sSerie = "PI" Then
+                If sCardType = "C" Then
+                    If sSerie = "CI" Or sSerie = "PI" Then
+                        If oOCRD_Destino.Add() <> 0 Then
+                            oObjGlobal.SBOApp.StatusBar.SetText("Error Creando IC - " & sLicTradNum & " - " & oOCRD.CardName & " - " &
+                                                                        oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                        Else
+                            oObjGlobal.SBOApp.StatusBar.SetText("IC Creado- " & sLicTradNum & " - " & oOCRD.CardName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
+                        End If
+                    End If
+                Else
                     If oOCRD_Destino.Add() <> 0 Then
                         oObjGlobal.SBOApp.StatusBar.SetText("Error Creando IC - " & sLicTradNum & " - " & oOCRD.CardName & " - " &
                                                                     oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
@@ -864,7 +873,6 @@ Public Class EXO_GLOBALES
                         oObjGlobal.SBOApp.StatusBar.SetText("IC Creado- " & sLicTradNum & " - " & oOCRD.CardName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
                     End If
                 End If
-
             Else
                 If oOCRD_Destino.Update() <> 0 Then
                     oObjGlobal.SBOApp.StatusBar.SetText("Error actualizando IC - " & sLicTradNum & " - " & oOCRD.CardName & " - " &
