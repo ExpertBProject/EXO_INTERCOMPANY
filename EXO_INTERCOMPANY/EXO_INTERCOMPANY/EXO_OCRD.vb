@@ -151,7 +151,8 @@ Public Class EXO_OCRD
                 sBBDDDMaster = objGlobal.refDi.SQL.sqlStringB1(sSQL)
 
                 ' Si estamos en la master enviamos datos a los destinos
-                If sBBDD = sBBDDDMaster And (sCardType = "S" Or (sCardType = "C" And sSerie = "CI")) Then
+                'If sBBDD = sBBDDDMaster And (sCardType = "S" Or (sCardType = "C" And sSerie = "CI")) Then
+                If sBBDD = sBBDDDMaster And ((sCardType = "C" And sSerie = "CI")) Then
                     OdtEmpresas = New System.Data.DataTable
                     OdtEmpresas.Clear()
                     sSQL = "SELECT * FROM ""@EXO_IPANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_TIPO""='D' "
