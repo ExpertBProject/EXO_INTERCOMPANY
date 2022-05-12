@@ -901,7 +901,7 @@ Public Class EXO_GLOBALES
             EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oRsdtoPP_Des, Object))
             EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oOBPP_Destino, Object))
             EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oOCDC, Object))
-            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oOCRD, Object))
+            'EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oOCRD, Object))
             EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oOCRG, Object))
             EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oOCTG, Object))
             EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oOIDC, Object))
