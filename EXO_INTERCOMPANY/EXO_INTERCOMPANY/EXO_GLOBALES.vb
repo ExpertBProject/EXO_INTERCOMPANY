@@ -811,6 +811,9 @@ Public Class EXO_GLOBALES
             If oOCRD.DownPaymentClearAct.ToString.Trim <> "" Then
                 oOCRD_Destino.DownPaymentClearAct = oOCRD.DownPaymentClearAct
             End If
+            If oOCRD.DownPaymentInterimAccount.ToString.Trim <> "" Then
+                oOCRD_Destino.DownPaymentInterimAccount = oOCRD.DownPaymentInterimAccount
+            End If
 
             'Falta una cuenta y las del botón
 
@@ -829,6 +832,9 @@ Public Class EXO_GLOBALES
 
             oOCRD_Destino.OperationCode347 = oOCRD.OperationCode347
             oOCRD_Destino.InsuranceOperation347 = oOCRD.InsuranceOperation347
+
+            oOCRD_Destino.VatLiable = oOCRD.VatLiable
+            oOCRD_Destino.VatGroup = oOCRD.VatGroup
 #End Region
 #Region "Pestaña propiedades"
             For i = 1 To 64
@@ -866,12 +872,12 @@ Public Class EXO_GLOBALES
                         End If
                     End If
                 Else
-                    If oOCRD_Destino.Add() <> 0 Then
-                        oObjGlobal.SBOApp.StatusBar.SetText("Error Creando IC - " & sLicTradNum & " - " & oOCRD.CardName & " - " &
-                                                                    oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                    Else
-                        oObjGlobal.SBOApp.StatusBar.SetText("IC Creado- " & sLicTradNum & " - " & oOCRD.CardName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
-                    End If
+                    'If oOCRD_Destino.Add() <> 0 Then
+                    '    oObjGlobal.SBOApp.StatusBar.SetText("Error Creando IC - " & sLicTradNum & " - " & oOCRD.CardName & " - " &
+                    '                                                oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                    'Else
+                    '    oObjGlobal.SBOApp.StatusBar.SetText("IC Creado- " & sLicTradNum & " - " & oOCRD.CardName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
+                    'End If
                 End If
             Else
                 If oOCRD_Destino.Update() <> 0 Then
@@ -1554,7 +1560,13 @@ Public Class EXO_GLOBALES
                 oOCRD.FatherType = oOCRD_Master.FatherType
 
                 oOCRD.DownPaymentInterimAccount = oOCRD_Master.DownPaymentInterimAccount
-                oOCRD.DownPaymentClearAct = oOCRD_Master.DownPaymentClearAct
+                If oOCRD_Master.DownPaymentClearAct.ToString.Trim <> "" Then
+                    oOCRD.DownPaymentClearAct = oOCRD_Master.DownPaymentClearAct
+                End If
+                If oOCRD_Master.DownPaymentInterimAccount.ToString.Trim <> "" Then
+                    oOCRD.DownPaymentInterimAccount = oOCRD_Master.DownPaymentInterimAccount
+                End If
+
                 'Falta una cuenta y las del botón
 
                 'Falta connbp
@@ -1569,6 +1581,9 @@ Public Class EXO_GLOBALES
                 oOCRD.AccrualCriteria = oOCRD_Master.AccrualCriteria
                 oOCRD.CertificateNumber = oOCRD_Master.CertificateNumber
                 oOCRD.ExpirationDate = oOCRD_Master.ExpirationDate
+
+                oOCRD.VatLiable = oOCRD_Master.VatLiable
+                oOCRD.VatGroup = oOCRD_Master.VatGroup
 
                 oOCRD.OperationCode347 = oOCRD_Master.OperationCode347
                 oOCRD.InsuranceOperation347 = oOCRD_Master.InsuranceOperation347
