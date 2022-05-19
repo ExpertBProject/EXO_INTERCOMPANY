@@ -186,7 +186,7 @@ Public Class EXO_OCRD
                     If OdtEmpresas.Rows.Count > 0 Then
                         oOCRD = CType(objGlobal.compañia.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oBusinessPartners), SAPbobsCOM.BusinessPartners)
                         If oOCRD.GetByKey(sCardCode) = True Then
-                            objGlobal.SBOApp.StatusBar.SetText("Se va a buscar datos en la Empresa Master...", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                            objGlobal.SBOApp.StatusBar.SetText("Se va a buscar datos en la empresa Consolidación...", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
                             For Each dr As DataRow In OdtEmpresas.Rows
                                 Try
                                     sBBDD = dr.Item("U_EXO_BBDD").ToString : sUser = dr.Item("U_EXO_USER").ToString : sPass = dr.Item("U_EXO_PASS").ToString
@@ -194,9 +194,9 @@ Public Class EXO_OCRD
                                     objGlobal.SBOApp.StatusBar.SetText("Sincronizando Proveedor: " & sCardCode & " - " & sCardName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
                                     bHaSincronizado = EXO_GLOBALES.Sincroniza_proveedor(oOCRD, oCompanyMaster, objGlobal)
                                     If bHaSincronizado = False Then
-                                        objGlobal.SBOApp.StatusBar.SetText("Proveedor no creado en la empresa Master. Por favor, dadlo de alta en la empresa master. ", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                                        objGlobal.SBOApp.StatusBar.SetText("Proveedor no creado en la empresa Consolidación. Por favor, dadlo de alta en la empresa Consolidación. ", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
                                         oOCRD.Remove()
-                                        objGlobal.SBOApp.MessageBox("Proveedor no creado en la empresa Master. Por favor, dadlo de alta en la empresa master. ")
+                                        objGlobal.SBOApp.MessageBox("Proveedor no creado en la empresa Consolidación. Por favor, dadlo de alta en la empresa Consolidación. ")
                                     End If
                                 Catch ex As Exception
                                     objGlobal.SBOApp.StatusBar.SetText("Error: " & ex.Message, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)

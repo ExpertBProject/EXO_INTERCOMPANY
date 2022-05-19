@@ -1069,7 +1069,7 @@ Public Class EXO_GLOBALES
                             End If
                         End If
                     Else
-                        oObjGlobal.SBOApp.StatusBar.SetText("Error grave. No se encuentra en la empresa Master el indicador de Factoring " & sIndicator, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                        oObjGlobal.SBOApp.StatusBar.SetText("Error grave. No se encuentra en la empresa Consolidación el indicador de Factoring " & sIndicator, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                         Exit Function
                     End If
                     oOCRD.Indicator = oOCRD_Master.Indicator
@@ -1105,7 +1105,7 @@ Public Class EXO_GLOBALES
                         End If
                         oOCRD.Industry = CType(sRamo, Integer)
                     Else
-                        oObjGlobal.SBOApp.StatusBar.SetText("Error grave. No se encuentra en la empresa Master el Ramo " & sRamo, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                        oObjGlobal.SBOApp.StatusBar.SetText("Error grave. No se encuentra en la empresa Consolidación el Ramo " & sRamo, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                         Exit Function
                     End If
                 End If
@@ -1159,7 +1159,7 @@ Public Class EXO_GLOBALES
                             End If
                         End If
                     Else
-                        oObjGlobal.SBOApp.StatusBar.SetText("Error grave. No se encuentra en la empresa Master el empleado de ventas " & sEmpleado, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                        oObjGlobal.SBOApp.StatusBar.SetText("Error grave. No se encuentra en la empresa Consolidación el empleado de ventas " & sEmpleado, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                         Exit Function
                     End If
                     oOCRD.SalesPersonCode = CType(sEmpleado, Integer)
@@ -1394,7 +1394,7 @@ Public Class EXO_GLOBALES
                         End If
                         oOCRD.PayTermsGrpCode = CType(sGroupNum, Integer)
                     Else
-                        oObjGlobal.SBOApp.StatusBar.SetText("Error grave. No se encuentra en la empresa Master la condición de pago." & sCondPago, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                        oObjGlobal.SBOApp.StatusBar.SetText("Error grave. No se encuentra en la empresa Consolidación la condición de pago." & sCondPago, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                         Exit Function
                     End If
                 End If
@@ -1467,7 +1467,7 @@ Public Class EXO_GLOBALES
                             oOCRD.Priority = CType(sPrioridad, Integer)
                         End If
                     Else
-                        oObjGlobal.SBOApp.StatusBar.SetText("Error grave. No se encuentra en la empresa Master la prioridad " & sPrioridad, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                        oObjGlobal.SBOApp.StatusBar.SetText("Error grave. No se encuentra en la empresa Consolidación la prioridad " & sPrioridad, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                         Exit Function
                     End If
                 End If
@@ -1544,7 +1544,7 @@ Public Class EXO_GLOBALES
                                 End If
                             End If
                         Else
-                            oObjGlobal.SBOApp.StatusBar.SetText("Error grave. No se encuentra en la empresa Master la vía de pago " & sViaPago, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                            oObjGlobal.SBOApp.StatusBar.SetText("Error grave. No se encuentra en la empresa Consolidación la vía de pago " & sViaPago, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                             Exit Function
                         End If
                     End If
@@ -2278,7 +2278,7 @@ Public Class EXO_GLOBALES
 
                     CrearFacturaCompra = True
                 Else
-                    sMensaje = "No se ha encontrado la empresa Master. Por favor, verifique la parametrización del Intercompany para generar la factura de compra."
+                    sMensaje = "No se ha encontrado la empresa Consolidación. Por favor, verifique la parametrización del Intercompany para generar la factura de compra."
                     oObjGlobal.SBOApp.StatusBar.SetText("(EXO) - " & sMensaje, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                     oObjGlobal.SBOApp.MessageBox(sMensaje)
                 End If
@@ -2444,7 +2444,7 @@ Public Class EXO_GLOBALES
                     End If
                     CrearAbonoCompra = True
                 Else
-                    sMensaje = "No se ha encontrado la empresa Master. Por favor, verifique la parametrización del Intercompany para generar la factura de compra."
+                    sMensaje = "No se ha encontrado la empresa Consolidación. Por favor, verifique la parametrización del Intercompany para generar la factura de compra."
                     oObjGlobal.SBOApp.StatusBar.SetText("(EXO) - " & sMensaje, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                     oObjGlobal.SBOApp.MessageBox(sMensaje)
                 End If
@@ -2578,7 +2578,7 @@ Public Class EXO_GLOBALES
 
                     CancelarFacturaCompra = True
                 Else
-                    sMensaje = "No se ha encontrado la empresa Master. Por favor, verifique la parametrización del Intercompany para generar la factura de compra."
+                    sMensaje = "No se ha encontrado la empresa Consolidación. Por favor, verifique la parametrización del Intercompany para generar la factura de compra."
                     oObjGlobal.SBOApp.StatusBar.SetText("(EXO) - " & sMensaje, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                     oObjGlobal.SBOApp.MessageBox(sMensaje)
                 End If
