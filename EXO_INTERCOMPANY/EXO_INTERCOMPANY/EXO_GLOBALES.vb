@@ -191,7 +191,7 @@ Public Class EXO_GLOBALES
             oOCRD_Destino = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oBusinessPartners), SAPbobsCOM.BusinessPartners)
             If oRs.RecordCount > 0 Then
                 sCardCode = oRs.Fields.Item("CardCode").Value.ToString
-                If oOCRD_Destino.GetByKey(sCardCode) = True Then
+                If oOCRD_Destino.GetByKey(sCardCode) = True And sCardCode <> "" Then
                     oObjGlobal.SBOApp.StatusBar.SetText("Se procede a actualizar el interlocutor " & oOCRD.CardName & " con CIF/NIF " & sLicTradNum, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
                     sExiste_IC = True
                 Else
@@ -203,225 +203,232 @@ Public Class EXO_GLOBALES
                 'Buscamos la serie, ya que puede que tenga otro código
                 oOCRD_Destino.CardType = oOCRD.CardType
                 sSQL = "SELECT ""Series"" FROM """ & oCompanyDes.CompanyDB & """.""NNM1"" WHERE ""SeriesName""='" & sSerie & "' and ""ObjectCode""='2'  "
-                oOCRD_Destino.Series = CType(oObjGlobal.refDi.SQL.sqlStringB1(sSQL), Integer)
+                Dim sSeries As String = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                If IsNumeric(sSeries) Then
+                    oOCRD_Destino.Series = CType(sSeries, Integer)
+                End If
+
                 If sSerie = "Manual" Then
                     oOCRD_Destino.CardCode = oOCRD.CardCode
                 End If
             End If
-
-            oOCRD_Destino.CardName = oOCRD.CardName
-            oOCRD_Destino.CardForeignName = oOCRD.CardForeignName
-            oOCRD_Destino.Currency = oOCRD.Currency
+            oObjGlobal.SBOApp.StatusBar.SetText(sExiste_IC.ToString & " - " & sCardType, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success) 'Necesario para que funcione NO QUITAR
+            If sExiste_IC = False And sCardType = "S" Then
+                oObjGlobal.SBOApp.StatusBar.SetText("No existe el interlocutor " & oOCRD.CardName & " con CIF/NIF " & sLicTradNum, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+            Else
+                oOCRD_Destino.CardName = oOCRD.CardName
+                oOCRD_Destino.CardForeignName = oOCRD.CardForeignName
+                oOCRD_Destino.Currency = oOCRD.Currency
 #Region "Grupos"
-            If sCardType <> "" And sGrupo <> "" And sGrupo <> "0" Then
-                oOCRG = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oBusinessPartnerGroups), SAPbobsCOM.BusinessPartnerGroups)
-                'Vemos si existe el grupo
-                sSQL = "SELECT * FROM OCRG WHERE ""GroupName""='" & sGrupo & "' and ""GroupType""='" & sCardType & "' "
-                oRsGrupos_Des.DoQuery(sSQL)
-                If oRsGrupos_Des.RecordCount = 0 Then
-                    Select Case sCardType
-                        Case "S" : oOCRG.Type = SAPbobsCOM.BoBusinessPartnerGroupTypes.bbpgt_VendorGroup
-                        Case "C", "L" : oOCRG.Type = SAPbobsCOM.BoBusinessPartnerGroupTypes.bbpgt_CustomerGroup
-                    End Select
-                    oOCRG.Name = sGrupo
-                    'Añadir
-                    If oOCRG.Add() <> 0 Then
-                        oObjGlobal.SBOApp.StatusBar.SetText("Error Creando Grupo para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " & oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                        Exit Function
+                If sCardType <> "" And sGrupo <> "" And sGrupo <> "0" Then
+                    oOCRG = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oBusinessPartnerGroups), SAPbobsCOM.BusinessPartnerGroups)
+                    'Vemos si existe el grupo
+                    sSQL = "SELECT * FROM OCRG WHERE ""GroupName""='" & sGrupo & "' and ""GroupType""='" & sCardType & "' "
+                    oRsGrupos_Des.DoQuery(sSQL)
+                    If oRsGrupos_Des.RecordCount = 0 Then
+                        Select Case sCardType
+                            Case "S" : oOCRG.Type = SAPbobsCOM.BoBusinessPartnerGroupTypes.bbpgt_VendorGroup
+                            Case "C", "L" : oOCRG.Type = SAPbobsCOM.BoBusinessPartnerGroupTypes.bbpgt_CustomerGroup
+                        End Select
+                        oOCRG.Name = sGrupo
+                        'Añadir
+                        If oOCRG.Add() <> 0 Then
+                            oObjGlobal.SBOApp.StatusBar.SetText("Error Creando Grupo para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " & oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                            Exit Function
+                        End If
+                        oCompanyDes.GetNewObjectCode(sGrupo)
+                    Else
+                        sGrupo = oRsGrupos_Des.Fields.Item("GroupCode").Value.ToString
                     End If
-                    oCompanyDes.GetNewObjectCode(sGrupo)
-                Else
-                    sGrupo = oRsGrupos_Des.Fields.Item("GroupCode").Value.ToString
+                    oOCRD_Destino.GroupCode = CType(sGrupo, Integer)
                 End If
-                oOCRD_Destino.GroupCode = CType(sGrupo, Integer)
-            End If
 #End Region
-            oOCRD_Destino.FederalTaxID = oOCRD.FederalTaxID
-            'Pestaña General
-            oOCRD_Destino.Phone1 = oOCRD.Phone1
-            oOCRD_Destino.Phone2 = oOCRD.Phone2
-            oOCRD_Destino.Cellular = oOCRD.Cellular
-            oOCRD_Destino.Fax = oOCRD.Fax
-            oOCRD_Destino.EmailAddress = oOCRD.EmailAddress
-            oOCRD_Destino.MailAddress = oOCRD.MailAddress
-            oOCRD_Destino.MailCity = oOCRD.MailCity
-            oOCRD_Destino.MailCounty = oOCRD.MailCounty
-            oOCRD_Destino.MailZipCode = oOCRD.MailZipCode
-            oOCRD_Destino.ETaxWebSite = oOCRD.ETaxWebSite
-            oOCRD_Destino.Website = oOCRD.Website
+                oOCRD_Destino.FederalTaxID = oOCRD.FederalTaxID
+                'Pestaña General
+                oOCRD_Destino.Phone1 = oOCRD.Phone1
+                oOCRD_Destino.Phone2 = oOCRD.Phone2
+                oOCRD_Destino.Cellular = oOCRD.Cellular
+                oOCRD_Destino.Fax = oOCRD.Fax
+                oOCRD_Destino.EmailAddress = oOCRD.EmailAddress
+                oOCRD_Destino.MailAddress = oOCRD.MailAddress
+                oOCRD_Destino.MailCity = oOCRD.MailCity
+                oOCRD_Destino.MailCounty = oOCRD.MailCounty
+                oOCRD_Destino.MailZipCode = oOCRD.MailZipCode
+                oOCRD_Destino.ETaxWebSite = oOCRD.ETaxWebSite
+                oOCRD_Destino.Website = oOCRD.Website
 #Region "Clase de Expedición"
-            If sClase_Expe <> "" Then
-                oOSHP = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oShippingTypes), SAPbobsCOM.ShippingTypes)
-                sSQL = "SELECT * FROM OSHP WHERE ""TrnspName""='" & sClase_Expe.Trim & "' "
-                oRsClase_Expe.DoQuery(sSQL)
-                If oRsClase_Expe.RecordCount > 0 Then
+                If sClase_Expe <> "" Then
+                    oOSHP = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oShippingTypes), SAPbobsCOM.ShippingTypes)
                     sSQL = "SELECT * FROM OSHP WHERE ""TrnspName""='" & sClase_Expe.Trim & "' "
-                    oRsClase_Expe_Des.DoQuery(sSQL)
-                    If oRsClase_Expe_Des.RecordCount > 0 Then
-                        If oOSHP.GetByKey(CType(oRsClase_Expe_Des.Fields.Item("TrnspCode").Value.ToString, Integer)) = True Then
+                    oRsClase_Expe.DoQuery(sSQL)
+                    If oRsClase_Expe.RecordCount > 0 Then
+                        sSQL = "SELECT * FROM OSHP WHERE ""TrnspName""='" & sClase_Expe.Trim & "' "
+                        oRsClase_Expe_Des.DoQuery(sSQL)
+                        If oRsClase_Expe_Des.RecordCount > 0 Then
+                            If oOSHP.GetByKey(CType(oRsClase_Expe_Des.Fields.Item("TrnspCode").Value.ToString, Integer)) = True Then
+                                oOSHP.Website = oRsClase_Expe.Fields.Item("WebSite").Value.ToString
+                                If oOSHP.Update() <> 0 Then
+                                    oObjGlobal.SBOApp.StatusBar.SetText("Error Actualizando Clase de Expedición para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " & oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                                    Exit Function
+                                Else
+                                    oCompanyDes.GetNewObjectCode(sClase_Expe)
+                                End If
+                            End If
+                        Else
+                            oOSHP.Name = sClase_Expe
                             oOSHP.Website = oRsClase_Expe.Fields.Item("WebSite").Value.ToString
-                            If oOSHP.Update() <> 0 Then
-                                oObjGlobal.SBOApp.StatusBar.SetText("Error Actualizando Clase de Expedición para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " & oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                            If oOSHP.Add() <> 0 Then
+                                oObjGlobal.SBOApp.StatusBar.SetText("Error Creando Clase de Expedición para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " & oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                                 Exit Function
                             Else
                                 oCompanyDes.GetNewObjectCode(sClase_Expe)
                             End If
                         End If
                     Else
-                        oOSHP.Name = sClase_Expe
-                        oOSHP.Website = oRsClase_Expe.Fields.Item("WebSite").Value.ToString
-                        If oOSHP.Add() <> 0 Then
-                            oObjGlobal.SBOApp.StatusBar.SetText("Error Creando Clase de Expedición para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " & oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                            Exit Function
-                        Else
-                            oCompanyDes.GetNewObjectCode(sClase_Expe)
-                        End If
+                        oObjGlobal.SBOApp.StatusBar.SetText("Error grave. No se encuentra en la empresa activa la clase de expedición " & sClase_Expe, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                        Exit Function
                     End If
-                Else
-                    oObjGlobal.SBOApp.StatusBar.SetText("Error grave. No se encuentra en la empresa activa la clase de expedición " & sClase_Expe, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                    Exit Function
+                    oOCRD_Destino.ShippingType = CType(sClase_Expe, Integer)
                 End If
-                oOCRD_Destino.ShippingType = CType(sClase_Expe, Integer)
-            End If
 #End Region
-            oOCRD_Destino.Password = oOCRD.Password
+                oOCRD_Destino.Password = oOCRD.Password
 #Region "Indicador de Factoring"
-            If sIndicator <> "" Then
-                oOIDC = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oFactoringIndicators), SAPbobsCOM.FactoringIndicators)
-                sSQL = "SELECT * FROM OIDC WHERE ""Code""='" & sIndicator & "' "
-                oRsIndicator.DoQuery(sSQL)
-                If oRsIndicator.RecordCount > 0 Then
-                    If oOIDC.GetByKey(sIndicator) = True Then
-                        oOIDC.IndicatorName = oRsIndicator.Fields.Item("Name").Value.ToString
-                        If oOIDC.Update() <> 0 Then
-                            oObjGlobal.SBOApp.StatusBar.SetText("Error Actualizando Indicador de Factoring para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " & oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                            Exit Function
+                If sIndicator <> "" Then
+                    oOIDC = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oFactoringIndicators), SAPbobsCOM.FactoringIndicators)
+                    sSQL = "SELECT * FROM OIDC WHERE ""Code""='" & sIndicator & "' "
+                    oRsIndicator.DoQuery(sSQL)
+                    If oRsIndicator.RecordCount > 0 Then
+                        If oOIDC.GetByKey(sIndicator) = True Then
+                            oOIDC.IndicatorName = oRsIndicator.Fields.Item("Name").Value.ToString
+                            If oOIDC.Update() <> 0 Then
+                                oObjGlobal.SBOApp.StatusBar.SetText("Error Actualizando Indicador de Factoring para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " & oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                                Exit Function
+                            End If
+                        Else
+                            oOIDC.IndicatorCode = sIndicator
+                            oOIDC.IndicatorName = oRsIndicator.Fields.Item("Name").Value.ToString
+                            If oOIDC.Add() <> 0 Then
+                                oObjGlobal.SBOApp.StatusBar.SetText("Error Creando Indicador de Factoring para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " & oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                                Exit Function
+                            End If
                         End If
                     Else
-                        oOIDC.IndicatorCode = sIndicator
-                        oOIDC.IndicatorName = oRsIndicator.Fields.Item("Name").Value.ToString
-                        If oOIDC.Add() <> 0 Then
-                            oObjGlobal.SBOApp.StatusBar.SetText("Error Creando Indicador de Factoring para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " & oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                            Exit Function
-                        End If
+                        oObjGlobal.SBOApp.StatusBar.SetText("Error grave. No se encuentra en la empresa activa el indicador de Factoring " & sIndicator, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                        Exit Function
                     End If
-                Else
-                    oObjGlobal.SBOApp.StatusBar.SetText("Error grave. No se encuentra en la empresa activa el indicador de Factoring " & sIndicator, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                    Exit Function
+                    oOCRD_Destino.Indicator = oOCRD.Indicator
                 End If
-                oOCRD_Destino.Indicator = oOCRD.Indicator
-            End If
 #End Region
 #Region "Ramos"
-            If sRamo <> "" And sRamo <> "0" Then
-                oOOND = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oIndustries), SAPbobsCOM.Industries)
-                sSQL = "SELECT * FROM OOND WHERE ""IndCode""='" & sRamo & "' "
-                oRsRamo.DoQuery(sSQL)
-                If oRsRamo.RecordCount > 0 Then
-                    sSQL = "SELECT * FROM OOND WHERE ""IndName""='" & oRsRamo.Fields.Item("IndName").Value.ToString & "' "
-                    oRsRamo_Des.DoQuery(sSQL)
-                    If oRsRamo_Des.RecordCount > 0 Then
-                        oOOND.GetByKey(CType(oRsRamo_Des.Fields.Item("IndCode").Value.ToString, Integer))
-                        oOOND.IndustryName = oRsRamo.Fields.Item("IndName").Value.ToString
-                        oOOND.IndustryDescription = oRsRamo.Fields.Item("IndDesc").Value.ToString
-                        If oOOND.Update() <> 0 Then
-                            oObjGlobal.SBOApp.StatusBar.SetText("Error Actualizando Ramo para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " & oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                            Exit Function
+                If sRamo <> "" And sRamo <> "0" Then
+                    oOOND = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oIndustries), SAPbobsCOM.Industries)
+                    sSQL = "SELECT * FROM OOND WHERE ""IndCode""='" & sRamo & "' "
+                    oRsRamo.DoQuery(sSQL)
+                    If oRsRamo.RecordCount > 0 Then
+                        sSQL = "SELECT * FROM OOND WHERE ""IndName""='" & oRsRamo.Fields.Item("IndName").Value.ToString & "' "
+                        oRsRamo_Des.DoQuery(sSQL)
+                        If oRsRamo_Des.RecordCount > 0 Then
+                            oOOND.GetByKey(CType(oRsRamo_Des.Fields.Item("IndCode").Value.ToString, Integer))
+                            oOOND.IndustryName = oRsRamo.Fields.Item("IndName").Value.ToString
+                            oOOND.IndustryDescription = oRsRamo.Fields.Item("IndDesc").Value.ToString
+                            If oOOND.Update() <> 0 Then
+                                oObjGlobal.SBOApp.StatusBar.SetText("Error Actualizando Ramo para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " & oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                                Exit Function
+                            Else
+                                oCompanyDes.GetNewObjectCode(sRamo)
+                            End If
                         Else
-                            oCompanyDes.GetNewObjectCode(sRamo)
+                            oOOND.IndustryName = oRsRamo.Fields.Item("IndName").Value.ToString
+                            oOOND.IndustryDescription = oRsRamo.Fields.Item("IndDesc").Value.ToString
+                            If oOOND.Add() <> 0 Then
+                                oObjGlobal.SBOApp.StatusBar.SetText("Error Creando Ramo para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " & oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                                Exit Function
+                            Else
+                                oCompanyDes.GetNewObjectCode(sRamo)
+                            End If
                         End If
                     Else
-                        oOOND.IndustryName = oRsRamo.Fields.Item("IndName").Value.ToString
-                        oOOND.IndustryDescription = oRsRamo.Fields.Item("IndDesc").Value.ToString
-                        If oOOND.Add() <> 0 Then
-                            oObjGlobal.SBOApp.StatusBar.SetText("Error Creando Ramo para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " & oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                            Exit Function
-                        Else
-                            oCompanyDes.GetNewObjectCode(sRamo)
-                        End If
+                        oObjGlobal.SBOApp.StatusBar.SetText("Error grave. No se encuentra en la empresa activa el ramo " & sRamo, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                        Exit Function
                     End If
-                Else
-                    oObjGlobal.SBOApp.StatusBar.SetText("Error grave. No se encuentra en la empresa activa el ramo " & sRamo, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                    Exit Function
+                    oOCRD_Destino.Industry = CType(sRamo, Integer)
                 End If
-                oOCRD_Destino.Industry = CType(sRamo, Integer)
-            End If
 #End Region
-            oOCRD_Destino.CompanyPrivate = oOCRD.CompanyPrivate
-            oOCRD_Destino.AliasName = oOCRD.AliasName
-            oOCRD_Destino.Valid = oOCRD.Valid
-            oOCRD_Destino.ValidFrom = oOCRD.ValidFrom
-            oOCRD_Destino.ValidRemarks = oOCRD.ValidRemarks
-            oOCRD_Destino.ValidTo = oOCRD.ValidTo
+                oOCRD_Destino.CompanyPrivate = oOCRD.CompanyPrivate
+                oOCRD_Destino.AliasName = oOCRD.AliasName
+                oOCRD_Destino.Valid = oOCRD.Valid
+                oOCRD_Destino.ValidFrom = oOCRD.ValidFrom
+                oOCRD_Destino.ValidRemarks = oOCRD.ValidRemarks
+                oOCRD_Destino.ValidTo = oOCRD.ValidTo
 
-            oOCRD_Destino.AdditionalID = oOCRD.AdditionalID
-            oOCRD_Destino.UnifiedFederalTaxID = oOCRD.UnifiedFederalTaxID
-            oOCRD_Destino.VATRegistrationNumber = oOCRD.VATRegistrationNumber
-            oOCRD_Destino.ResidenNumber = oOCRD.ResidenNumber
-            oOCRD_Destino.Notes = oOCRD.Notes
+                oOCRD_Destino.AdditionalID = oOCRD.AdditionalID
+                oOCRD_Destino.UnifiedFederalTaxID = oOCRD.UnifiedFederalTaxID
+                oOCRD_Destino.VATRegistrationNumber = oOCRD.VATRegistrationNumber
+                'oOCRD_Destino.ResidenNumber = oOCRD.ResidenNumber
+                oOCRD_Destino.Notes = oOCRD.Notes
 #Region "Medios de comunicación"
-            ' No veo como Pasarlo
+                ' No veo como Pasarlo
 #End Region
 #Region "Empleado de ventas"
-            If sEmpleado <> "" Then
-                oOSLP = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oSalesPersons), SAPbobsCOM.SalesPersons)
-                sSQL = "SELECT * FROM OSLP WHERE ""SlpName""='" & sEmpleado & "' "
-                oRsEmpleado.DoQuery(sSQL)
-                If oRsEmpleado.RecordCount > 0 Then
+                If sEmpleado <> "" Then
+                    oOSLP = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oSalesPersons), SAPbobsCOM.SalesPersons)
                     sSQL = "SELECT * FROM OSLP WHERE ""SlpName""='" & sEmpleado & "' "
-                    oRsEmpleado_Des.DoQuery(sSQL)
-                    If oRsEmpleado_Des.RecordCount > 0 Then
-                        If oOSLP.GetByKey(CType(oRsEmpleado_Des.Fields.Item("SlpCode").Value.ToString, Integer)) = True Then
-                            oOSLP.SalesEmployeeName = sEmpleado
-                            Select Case oRsEmpleado.Fields.Item("Active").Value.ToString
-                                Case "Y" : oOSLP.Active = SAPbobsCOM.BoYesNoEnum.tYES
-                                Case Else : oOSLP.Active = SAPbobsCOM.BoYesNoEnum.tNO
-                            End Select
+                    oRsEmpleado.DoQuery(sSQL)
+                    If oRsEmpleado.RecordCount > 0 Then
+                        sSQL = "SELECT * FROM OSLP WHERE ""SlpName""='" & sEmpleado & "' "
+                        oRsEmpleado_Des.DoQuery(sSQL)
+                        If oRsEmpleado_Des.RecordCount > 0 Then
+                            If oOSLP.GetByKey(CType(oRsEmpleado_Des.Fields.Item("SlpCode").Value.ToString, Integer)) = True Then
+                                oOSLP.SalesEmployeeName = sEmpleado
+                                Select Case oRsEmpleado.Fields.Item("Active").Value.ToString
+                                    Case "Y" : oOSLP.Active = SAPbobsCOM.BoYesNoEnum.tYES
+                                    Case Else : oOSLP.Active = SAPbobsCOM.BoYesNoEnum.tNO
+                                End Select
 
-                            oOSLP.CommissionForSalesEmployee = EXO_GLOBALES.DblTextToNumber(oCompanyDes, oRsEmpleado.Fields.Item("Commission").Value.ToString)
-                            oOSLP.CommissionGroup = CType(oRsEmpleado.Fields.Item("GroupCode").Value.ToString, Integer)
-                            If oOSLP.Update() <> 0 Then
-                                oObjGlobal.SBOApp.StatusBar.SetText("Error Actualizando Empleado de venta para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " & oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                                Exit Function
+                                oOSLP.CommissionForSalesEmployee = EXO_GLOBALES.DblTextToNumber(oCompanyDes, oRsEmpleado.Fields.Item("Commission").Value.ToString)
+                                oOSLP.CommissionGroup = CType(oRsEmpleado.Fields.Item("GroupCode").Value.ToString, Integer)
+                                If oOSLP.Update() <> 0 Then
+                                    oObjGlobal.SBOApp.StatusBar.SetText("Error Actualizando Empleado de venta para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " & oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                                    Exit Function
+                                Else
+                                    oCompanyDes.GetNewObjectCode(sEmpleado)
+                                End If
                             Else
-                                oCompanyDes.GetNewObjectCode(sEmpleado)
-                            End If
-                        Else
-                            oOSLP.SalesEmployeeName = sEmpleado
-                            Select Case oRsEmpleado.Fields.Item("Active").Value.ToString
-                                Case "Y" : oOSLP.Active = SAPbobsCOM.BoYesNoEnum.tYES
-                                Case Else : oOSLP.Active = SAPbobsCOM.BoYesNoEnum.tNO
-                            End Select
+                                oOSLP.SalesEmployeeName = sEmpleado
+                                Select Case oRsEmpleado.Fields.Item("Active").Value.ToString
+                                    Case "Y" : oOSLP.Active = SAPbobsCOM.BoYesNoEnum.tYES
+                                    Case Else : oOSLP.Active = SAPbobsCOM.BoYesNoEnum.tNO
+                                End Select
 
-                            oOSLP.CommissionForSalesEmployee = EXO_GLOBALES.DblTextToNumber(oCompanyDes, oRsEmpleado.Fields.Item("Commission").Value.ToString)
-                            oOSLP.CommissionGroup = CType(oRsEmpleado.Fields.Item("GroupCode").Value.ToString, Integer)
-                            If oOSLP.Add() <> 0 Then
-                                oObjGlobal.SBOApp.StatusBar.SetText("Error Creando Empleado de venta para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " &
+                                oOSLP.CommissionForSalesEmployee = EXO_GLOBALES.DblTextToNumber(oCompanyDes, oRsEmpleado.Fields.Item("Commission").Value.ToString)
+                                oOSLP.CommissionGroup = CType(oRsEmpleado.Fields.Item("GroupCode").Value.ToString, Integer)
+                                If oOSLP.Add() <> 0 Then
+                                    oObjGlobal.SBOApp.StatusBar.SetText("Error Creando Empleado de venta para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " &
                                                                 oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                                Exit Function
-                            Else
-                                oCompanyDes.GetNewObjectCode(sEmpleado)
+                                    Exit Function
+                                Else
+                                    oCompanyDes.GetNewObjectCode(sEmpleado)
+                                End If
                             End If
                         End If
+                    Else
+                        oObjGlobal.SBOApp.StatusBar.SetText("Error grave. No se encuentra en la empresa activa el empleado." & sClase_Expe, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                        Exit Function
                     End If
-                Else
-                    oObjGlobal.SBOApp.StatusBar.SetText("Error grave. No se encuentra en la empresa activa el empleado." & sClase_Expe, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                    Exit Function
+                    oOCRD_Destino.SalesPersonCode = CType(sEmpleado, Integer)
                 End If
-                oOCRD_Destino.SalesPersonCode = CType(sEmpleado, Integer)
-            End If
 #End Region
 #Region "Responsables"
-            If sResponsable <> "" Then
-                sSQL = "SELECT * FROM OAGP WHERE ""AgentCode"" = '" & sResponsable & "'"
-                oRsResponsable_Des.DoQuery(sSQL)
-                If oRsResponsable_Des.RecordCount > 0 Then
-                    sSQL = "INSERT INTO """ & oCompanyDes.CompanyDB & """.""OAGP"" " &
+                If sResponsable <> "" Then
+                    sSQL = "SELECT * FROM OAGP WHERE ""AgentCode"" = '" & sResponsable & "'"
+                    oRsResponsable_Des.DoQuery(sSQL)
+                    If oRsResponsable_Des.RecordCount > 0 Then
+                        sSQL = "INSERT INTO """ & oCompanyDes.CompanyDB & """.""OAGP"" " &
                                "SELECT ""AgentCode"", ""AgentName"", ""Memo"", ""Locked"", ""DataSource"", ""UserSign"" " &
                                "FROM """ & oObjGlobal.compañia.CompanyDB & """.""OAGP"" t0  " &
                                "WHERE t0.""AgentCode"" = '" & sResponsable & "' "
-                Else
-                    sSQL = "UPDATE t1 SET ""AgentName"" = t0.""AgentName"", " &
+                    Else
+                        sSQL = "UPDATE t1 SET ""AgentName"" = t0.""AgentName"", " &
                               """Memo"" = t0.""Memo"", " &
                               """Locked"" = t0.""Locked"", " &
                               """DataSource"" = t0.""DataSource"", " &
@@ -429,126 +436,129 @@ Public Class EXO_GLOBALES
                               "FROM """ & oObjGlobal.compañia.CompanyDB & """.""OAGP"" t0  INNER JOIN " &
                               """" & oCompanyDes.CompanyDB & """.""OAGP"" t1  ON t0.""AgentCode"" = t1.""AgentCode"" " &
                               "WHERE t0.""AgentCode"" = '" & sResponsable & "' "
+                    End If
+                    If oObjGlobal.refDi.SQL.executeNonQuery(sSQL) = True Then
+                        oOCRD_Destino.SalesPersonCode = CType(sResponsable, Integer)
+                    Else
+                        oObjGlobal.SBOApp.StatusBar.SetText("Error Responsable para el IC " & sLicTradNum & " - " & oOCRD.CardName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                        Exit Function
+                    End If
                 End If
-                If oObjGlobal.refDi.SQL.executeNonQuery(sSQL) = True Then
-                    oOCRD_Destino.SalesPersonCode = CType(sResponsable, Integer)
-                Else
-                    oObjGlobal.SBOApp.StatusBar.SetText("Error Responsable para el IC " & sLicTradNum & " - " & oOCRD.CardName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                    Exit Function
-                End If
-            End If
 #End Region
 #Region "Canal"
-            oOCRD_Destino.ChannelBP = oOCRD.ChannelBP
+                oOCRD_Destino.ChannelBP = oOCRD.ChannelBP
 #End Region
-            oOCRD_Destino.GlobalLocationNumber = oOCRD.GlobalLocationNumber
+                oOCRD_Destino.GlobalLocationNumber = oOCRD.GlobalLocationNumber
 
-            'Pestaña Personas de contacto
+                'Pestaña Personas de contacto
 #Region "Personas de contacto"
-            For i = 0 To oOCRD_Destino.ContactEmployees.Count - 1
-                oOCRD_Destino.ContactEmployees.SetCurrentLine(0)
-                oOCRD_Destino.ContactEmployees.Delete()
-            Next
-            iContactos = oOCRD.ContactEmployees.Count
-            For i = 0 To iContactos - 1
-                oOCRD.ContactEmployees.SetCurrentLine(i)
-                oOCRD_Destino.ContactEmployees.Name = oOCRD.ContactEmployees.Name
-                oOCRD_Destino.ContactEmployees.Active = oOCRD.ContactEmployees.Active
-                oOCRD_Destino.ContactEmployees.FirstName = oOCRD.ContactEmployees.FirstName
-                oOCRD_Destino.ContactEmployees.LastName = oOCRD.ContactEmployees.LastName
-                oOCRD_Destino.ContactEmployees.MiddleName = oOCRD.ContactEmployees.MiddleName
-                oOCRD_Destino.ContactEmployees.Phone1 = oOCRD.ContactEmployees.Phone1
-                oOCRD_Destino.ContactEmployees.MobilePhone = oOCRD.ContactEmployees.MobilePhone
-                oOCRD_Destino.ContactEmployees.E_Mail = oOCRD.ContactEmployees.E_Mail
-                oOCRD_Destino.ContactEmployees.Position = oOCRD.ContactEmployees.Position
-                oOCRD_Destino.ContactEmployees.Add()
-            Next
-            oOCRD_Destino.ContactPerson = oOCRD.ContactPerson
+                For i = 0 To oOCRD_Destino.ContactEmployees.Count - 1
+                    oOCRD_Destino.ContactEmployees.SetCurrentLine(0)
+                    oOCRD_Destino.ContactEmployees.Delete()
+                Next
+                iContactos = oOCRD.ContactEmployees.Count
+                For i = 0 To iContactos - 1
+                    oOCRD.ContactEmployees.SetCurrentLine(i)
+                    oOCRD_Destino.ContactEmployees.Name = oOCRD.ContactEmployees.Name
+                    oOCRD_Destino.ContactEmployees.Active = oOCRD.ContactEmployees.Active
+                    oOCRD_Destino.ContactEmployees.FirstName = oOCRD.ContactEmployees.FirstName
+                    oOCRD_Destino.ContactEmployees.LastName = oOCRD.ContactEmployees.LastName
+                    oOCRD_Destino.ContactEmployees.MiddleName = oOCRD.ContactEmployees.MiddleName
+                    oOCRD_Destino.ContactEmployees.Phone1 = oOCRD.ContactEmployees.Phone1
+                    oOCRD_Destino.ContactEmployees.MobilePhone = oOCRD.ContactEmployees.MobilePhone
+                    oOCRD_Destino.ContactEmployees.E_Mail = oOCRD.ContactEmployees.E_Mail
+                    oOCRD_Destino.ContactEmployees.Position = oOCRD.ContactEmployees.Position
+                    oOCRD_Destino.ContactEmployees.Add()
+                Next
+                oOCRD_Destino.ContactPerson = oOCRD.ContactPerson
 #End Region
-            'Pestaña Direcciones
+                'Pestaña Direcciones
 #Region "Direcciones"
-            'Eliminamos direcciones
-            sSQL = "DELETE FROM """ & oCompanyDes.CompanyDB & """.""CRD1"" Where ""CardCode""='" & sCardCode & "' "
-            oObjGlobal.refDi.SQL.executeNonQuery(sSQL)
-            For i = 0 To oOCRD_Destino.Addresses.Count - 1
-                oOCRD_Destino.Addresses.SetCurrentLine(i)
-                oOCRD_Destino.Addresses.Delete()
-            Next
-            iDirecciones = oOCRD.Addresses.Count
-            For i = 0 To iDirecciones - 1
-                oOCRD.Addresses.SetCurrentLine(i)
-                If oOCRD.Addresses.AddressName <> "" Then
-                    oOCRD_Destino.Addresses.AddressType = oOCRD.Addresses.AddressType
-                    oOCRD_Destino.Addresses.AddressName = oOCRD.Addresses.AddressName
-                    oOCRD_Destino.Addresses.AddressName2 = oOCRD.Addresses.AddressName2
-                    oOCRD_Destino.Addresses.AddressName3 = oOCRD.Addresses.AddressName3
-                    oOCRD_Destino.Addresses.BuildingFloorRoom = oOCRD.Addresses.BuildingFloorRoom
-                    oOCRD_Destino.Addresses.Block = oOCRD.Addresses.Block
-                    oOCRD_Destino.Addresses.City = oOCRD.Addresses.City
-                    oOCRD_Destino.Addresses.Country = oOCRD.Addresses.Country
-                    oOCRD_Destino.Addresses.County = oOCRD.Addresses.County
-                    oOCRD_Destino.Addresses.FederalTaxID = oOCRD.Addresses.FederalTaxID
-                    oOCRD_Destino.Addresses.GlobalLocationNumber = oOCRD.Addresses.GlobalLocationNumber
-                    oOCRD_Destino.Addresses.GSTIN = oOCRD.Addresses.GSTIN
-                    oOCRD_Destino.Addresses.GstType = oOCRD.Addresses.GstType
-                    oOCRD_Destino.Addresses.MYFType = oOCRD.Addresses.MYFType
-                    oOCRD_Destino.Addresses.Nationality = oOCRD.Addresses.Nationality
-                    oOCRD_Destino.Addresses.State = oOCRD.Addresses.State
-                    oOCRD_Destino.Addresses.Street = oOCRD.Addresses.Street
-                    oOCRD_Destino.Addresses.StreetNo = oOCRD.Addresses.StreetNo
-                    oOCRD_Destino.Addresses.TaasEnabled = oOCRD.Addresses.TaasEnabled
-                    oOCRD_Destino.Addresses.TaxCode = oOCRD.Addresses.TaxCode
-                    oOCRD_Destino.Addresses.TaxOffice = oOCRD.Addresses.TaxOffice
-                    oOCRD_Destino.Addresses.TypeOfAddress = oOCRD.Addresses.TypeOfAddress
-                    oOCRD_Destino.Addresses.ZipCode = oOCRD.Addresses.ZipCode
-                    oOCRD_Destino.Addresses.Add()
-                End If
-            Next
-            oOCRD_Destino.ShipToBuildingFloorRoom = oOCRD.ShipToBuildingFloorRoom
-            oOCRD_Destino.ShipToDefault = oOCRD.ShipToDefault
-            oOCRD_Destino.BilltoDefault = oOCRD.BilltoDefault
-#End Region
-            'Pestaña condiciones de pago
-#Region "Condiciones de pago"
-            If sCondPago <> "" Then
-                oOCTG = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPaymentTermsTypes), SAPbobsCOM.PaymentTermsTypes)
-                sSQL = "SELECT * FROM OCTG WHERE ""PymntGroup""='" & sCondPago & "' "
-                oRsCondPago.DoQuery(sSQL)
-                If oRsCondPago.RecordCount > 0 Then
-                    sSQL = "SELECT * FROM OCTG WHERE ""PymntGroup""='" & sCondPago & "' "
-                    oRsCondPago_Des.DoQuery(sSQL)
-                    If oRsCondPago_Des.RecordCount > 0 Then
-                        oOCTG.GetByKey(CType(oRsCondPago_Des.Fields.Item("GroupNum").Value.ToString, Integer))
-                        sExiste_Cond_pago = True
-
-                    Else
-                        sExiste_Cond_pago = False
+                'Eliminamos direcciones
+                sSQL = "DELETE FROM """ & oCompanyDes.CompanyDB & """.""CRD1"" Where ""CardCode""='" & sCardCode & "' "
+                oObjGlobal.refDi.SQL.executeNonQuery(sSQL)
+                For i = 0 To oOCRD_Destino.Addresses.Count - 1
+                    oOCRD_Destino.Addresses.SetCurrentLine(i)
+                    oOCRD_Destino.Addresses.Delete()
+                Next
+                iDirecciones = oOCRD.Addresses.Count
+                For i = 0 To iDirecciones - 1
+                    oOCRD.Addresses.SetCurrentLine(i)
+                    If oOCRD.Addresses.AddressName <> "" Then
+                        oOCRD_Destino.Addresses.AddressType = oOCRD.Addresses.AddressType
+                        oOCRD_Destino.Addresses.AddressName = oOCRD.Addresses.AddressName
+                        oOCRD_Destino.Addresses.AddressName2 = oOCRD.Addresses.AddressName2
+                        oOCRD_Destino.Addresses.AddressName3 = oOCRD.Addresses.AddressName3
+                        oOCRD_Destino.Addresses.BuildingFloorRoom = oOCRD.Addresses.BuildingFloorRoom
+                        oOCRD_Destino.Addresses.Block = oOCRD.Addresses.Block
+                        oOCRD_Destino.Addresses.City = oOCRD.Addresses.City
+                        oOCRD_Destino.Addresses.Country = oOCRD.Addresses.Country
+                        oOCRD_Destino.Addresses.County = oOCRD.Addresses.County
+                        oOCRD_Destino.Addresses.FederalTaxID = oOCRD.Addresses.FederalTaxID
+                        oOCRD_Destino.Addresses.GlobalLocationNumber = oOCRD.Addresses.GlobalLocationNumber
+                        oOCRD_Destino.Addresses.GSTIN = oOCRD.Addresses.GSTIN
+                        oOCRD_Destino.Addresses.GstType = oOCRD.Addresses.GstType
+                        oOCRD_Destino.Addresses.MYFType = oOCRD.Addresses.MYFType
+                        oOCRD_Destino.Addresses.Nationality = oOCRD.Addresses.Nationality
+                        oOCRD_Destino.Addresses.State = oOCRD.Addresses.State
+                        oOCRD_Destino.Addresses.Street = oOCRD.Addresses.Street
+                        oOCRD_Destino.Addresses.StreetNo = oOCRD.Addresses.StreetNo
+                        oOCRD_Destino.Addresses.TaasEnabled = oOCRD.Addresses.TaasEnabled
+                        oOCRD_Destino.Addresses.TaxCode = oOCRD.Addresses.TaxCode
+                        oOCRD_Destino.Addresses.TaxOffice = oOCRD.Addresses.TaxOffice
+                        oOCRD_Destino.Addresses.TypeOfAddress = oOCRD.Addresses.TypeOfAddress
+                        oOCRD_Destino.Addresses.ZipCode = oOCRD.Addresses.ZipCode
+                        oOCRD_Destino.Addresses.Add()
                     End If
-                    oOCTG.PaymentTermsGroupName = oRsCondPago.Fields.Item("PymntGroup").Value.ToString
-                    Select Case oRsCondPago.Fields.Item("BsLineDate").Value.ToString
-                        Case "T" : oOCTG.BaselineDate = SAPbobsCOM.BoBaselineDate.bld_PostingDate
-                        Case "S" : oOCTG.BaselineDate = SAPbobsCOM.BoBaselineDate.bld_SystemDate
-                        Case "P" : oOCTG.BaselineDate = SAPbobsCOM.BoBaselineDate.bld_TaxDate
-                        Case Else : oOCTG.BaselineDate = SAPbobsCOM.BoBaselineDate.bld_ClosingDate
-                    End Select
-                    oOCTG.CreditLimit = EXO_GLOBALES.DblTextToNumber(oCompanyDes, oRsCondPago.Fields.Item("CredLimit").Value.ToString)
+                Next
+                oOCRD_Destino.ShipToBuildingFloorRoom = oOCRD.ShipToBuildingFloorRoom
+                oOCRD_Destino.ShipToDefault = oOCRD.ShipToDefault
+                oOCRD_Destino.BilltoDefault = oOCRD.BilltoDefault
+#End Region
+                'Pestaña condiciones de pago
+#Region "Condiciones de pago"
+                ' oObjGlobal.SBOApp.StatusBar.SetText("Condición de pago:" & sCondPago, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                If sCondPago <> "" Then
+                    oOCTG = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPaymentTermsTypes), SAPbobsCOM.PaymentTermsTypes)
+                    sSQL = "SELECT * FROM """ & oObjGlobal.compañia.CompanyDB & """.""OCTG"" WHERE ""PymntGroup""='" & sCondPago & "' "
+                    oRsCondPago.DoQuery(sSQL)
+                    If oRsCondPago.RecordCount > 0 Then
+                        sSQL = "SELECT * FROM """ & oCompanyDes.CompanyDB & """.""OCTG"" WHERE ""PymntGroup""='" & sCondPago & "' "
+                        oRsCondPago_Des.DoQuery(sSQL)
+                        If oRsCondPago_Des.RecordCount > 0 Then
+                            oOCTG.GetByKey(CType(oRsCondPago_Des.Fields.Item("GroupNum").Value.ToString, Integer))
+
+                            sExiste_Cond_pago = True
+                            oObjGlobal.SBOApp.StatusBar.SetText(sExiste_Cond_pago.ToString & " - Actualizando Condición de pago: " & oRsCondPago_Des.Fields.Item("GroupNum").Value.ToString, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
+                        Else
+                            sExiste_Cond_pago = False
+                            oObjGlobal.SBOApp.StatusBar.SetText(sExiste_Cond_pago.ToString & " - Creando Condición de pago: " & sCondPago, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
+                        End If
+                        oOCTG.PaymentTermsGroupName = oRsCondPago.Fields.Item("PymntGroup").Value.ToString
+                        Select Case oRsCondPago.Fields.Item("BsLineDate").Value.ToString
+                            Case "T" : oOCTG.BaselineDate = SAPbobsCOM.BoBaselineDate.bld_PostingDate
+                            Case "S" : oOCTG.BaselineDate = SAPbobsCOM.BoBaselineDate.bld_SystemDate
+                            Case "P" : oOCTG.BaselineDate = SAPbobsCOM.BoBaselineDate.bld_TaxDate
+                            Case Else : oOCTG.BaselineDate = SAPbobsCOM.BoBaselineDate.bld_ClosingDate
+                        End Select
+                        oOCTG.CreditLimit = EXO_GLOBALES.DblTextToNumber(oCompanyDes, oRsCondPago.Fields.Item("CredLimit").Value.ToString)
 #Region "Dto. PP"
-                    sDtoPP = oRsCondPago.Fields.Item("DiscCode").Value.ToString
-                    If sDtoPP.Trim <> "" Then
-                        sSQL = "SELECT * FROM OCDC WHERE ""Code"" = '" & sDtoPP & "'"
-                        oRsdtoPP_Des.DoQuery(sSQL)
-                        If oRsdtoPP_Des.RecordCount = 0 Then
-                            sSQL = "INSERT INTO """ & oCompanyDes.CompanyDB & """.""OCDC"" " &
+                        sDtoPP = oRsCondPago.Fields.Item("DiscCode").Value.ToString
+                        If sDtoPP.Trim <> "" Then
+                            sSQL = "SELECT * FROM OCDC WHERE ""Code"" = '" & sDtoPP & "'"
+                            oRsdtoPP_Des.DoQuery(sSQL)
+                            If oRsdtoPP_Des.RecordCount = 0 Then
+                                sSQL = "INSERT INTO """ & oCompanyDes.CompanyDB & """.""OCDC"" " &
                                        "SELECT ""Code"", ""TableDesc"", ""ByDate"", ""Freight"", ""Tax"", ""VatCrctn"",""BaseDate"" " &
                                        "FROM """ & oObjGlobal.compañia.CompanyDB & """.""OCDC"" t0  " &
                                        "WHERE t0.""Code"" = '" & sDtoPP & "'; "
 
-                            sSQL2 = " INSERT INTO """ & oCompanyDes.CompanyDB & """.""CDC1"" " &
+                                sSQL2 = " INSERT INTO """ & oCompanyDes.CompanyDB & """.""CDC1"" " &
                                        "SELECT ""CdcCode"", ""LineId"", ""NumOfDays"", ""Discount"", ""Day"", ""Month""  " &
                                        "FROM """ & oObjGlobal.compañia.CompanyDB & """.""CDC1"" t0  " &
                                        "WHERE t0.""CdcCode"" = '" & sDtoPP & "'; "
-                        Else
-                            sSQL = "UPDATE t1 SET ""Code"" = t0.""Code"", " &
+                            Else
+                                sSQL = "UPDATE t1 SET ""Code"" = t0.""Code"", " &
                                       """TableDesc"" = t0.""TableDesc"", " &
                                       """ByDate"" = t0.""ByDate"", " &
                                       """Freight"" = t0.""Freight"", " &
@@ -559,7 +569,7 @@ Public Class EXO_GLOBALES
                                       """" & oCompanyDes.CompanyDB & """.""OCDC"" t1  ON t0.""Code"" = t1.""Code"" " &
                                       "WHERE t0.""Code"" = '" & sDtoPP & "'; "
 
-                            sSQL2 = " UPDATE t1 SET ""CdcCode"" = t0.""CdcCode"", " &
+                                sSQL2 = " UPDATE t1 SET ""CdcCode"" = t0.""CdcCode"", " &
                                       """LineId"" = t0.""LineId"", " &
                                       """NumOfDays"" = t0.""NumOfDays"", " &
                                       """Discount"" = t0.""Discount"", " &
@@ -568,298 +578,311 @@ Public Class EXO_GLOBALES
                                       "FROM """ & oObjGlobal.compañia.CompanyDB & """.""CDC1"" t0  INNER JOIN " &
                                       """" & oCompanyDes.CompanyDB & """.""CDC1"" t1  ON t0.""CdcCode"" = t1.""CdcCode"" " &
                                       "WHERE t0.""CdcCode"" = '" & sDtoPP & "'; "
-                        End If
-                        If oObjGlobal.refDi.SQL.executeNonQuery(sSQL) = True Then
-                            If oObjGlobal.refDi.SQL.executeNonQuery(sSQL2) = True Then
-                                oOCTG.DiscountCode = sDtoPP
+                            End If
+                            If oObjGlobal.refDi.SQL.executeNonQuery(sSQL) = True Then
+                                If oObjGlobal.refDi.SQL.executeNonQuery(sSQL2) = True Then
+                                    oOCTG.DiscountCode = sDtoPP
+                                Else
+                                    oObjGlobal.SBOApp.StatusBar.SetText("Error Línea Dto. PP para el IC " & sLicTradNum & " - " & oOCRD.CardName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                                    Exit Function
+                                End If
                             Else
-                                oObjGlobal.SBOApp.StatusBar.SetText("Error Línea Dto. PP para el IC " & sLicTradNum & " - " & oOCRD.CardName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                                oObjGlobal.SBOApp.StatusBar.SetText("Error cabecera Dto. PP para el IC " & sLicTradNum & " - " & oOCRD.CardName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                                 Exit Function
                             End If
-                        Else
-                            oObjGlobal.SBOApp.StatusBar.SetText("Error cabecera Dto. PP para el IC " & sLicTradNum & " - " & oOCRD.CardName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                            Exit Function
                         End If
-                    End If
 #End Region
-                    oOCTG.PriceListNo = CType(oRsCondPago.Fields.Item("ListNum").Value.ToString, Integer)
-                    oOCTG.CreditLimit = EXO_GLOBALES.DblTextToNumber(oCompanyDes, oRsCondPago.Fields.Item("CredLimit").Value.ToString)
-                    oOCTG.LoadLimit = EXO_GLOBALES.DblTextToNumber(oCompanyDes, oRsCondPago.Fields.Item("ObligLimit").Value.ToString)
-                    Select Case oRsCondPago.Fields.Item("OpenRcpt").Value.ToString
-                        Case "N" : oOCTG.OpenReceipt = SAPbobsCOM.BoOpenIncPayment.oip_No
-                        Case "3" : oOCTG.OpenReceipt = SAPbobsCOM.BoOpenIncPayment.oip_Cash
-                        Case "1" : oOCTG.OpenReceipt = SAPbobsCOM.BoOpenIncPayment.oip_Checks
-                        Case "4" : oOCTG.OpenReceipt = SAPbobsCOM.BoOpenIncPayment.oip_Credit
-                        Case "2" : oOCTG.OpenReceipt = SAPbobsCOM.BoOpenIncPayment.oip_BankTransfer
-                        Case "5" : oOCTG.OpenReceipt = SAPbobsCOM.BoOpenIncPayment.oip_Cash
-                    End Select
+                        If IsNumeric(oRsCondPago.Fields.Item("ListNum").Value) Then
+                            oOCTG.PriceListNo = CType(oRsCondPago.Fields.Item("ListNum").Value.ToString, Integer)
+                        End If
+                        oOCTG.CreditLimit = EXO_GLOBALES.DblTextToNumber(oCompanyDes, oRsCondPago.Fields.Item("CredLimit").Value.ToString)
+                        oOCTG.LoadLimit = EXO_GLOBALES.DblTextToNumber(oCompanyDes, oRsCondPago.Fields.Item("ObligLimit").Value.ToString)
+                        Select Case oRsCondPago.Fields.Item("OpenRcpt").Value.ToString
+                            Case "N" : oOCTG.OpenReceipt = SAPbobsCOM.BoOpenIncPayment.oip_No
+                            Case "3" : oOCTG.OpenReceipt = SAPbobsCOM.BoOpenIncPayment.oip_Cash
+                            Case "1" : oOCTG.OpenReceipt = SAPbobsCOM.BoOpenIncPayment.oip_Checks
+                            Case "4" : oOCTG.OpenReceipt = SAPbobsCOM.BoOpenIncPayment.oip_Credit
+                            Case "2" : oOCTG.OpenReceipt = SAPbobsCOM.BoOpenIncPayment.oip_BankTransfer
+                            Case "5" : oOCTG.OpenReceipt = SAPbobsCOM.BoOpenIncPayment.oip_Cash
+                        End Select
 
-                    If sExiste_Cond_pago = True Then
-                        If oOCTG.Update() <> 0 Then
-                            oObjGlobal.SBOApp.StatusBar.SetText("Error Actulizando Condiciones de pago para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " &
+                        If sExiste_Cond_pago = True Then
+                            If oOCTG.Update() <> 0 Then
+                                oObjGlobal.SBOApp.StatusBar.SetText("Error Actualizando Condiciones de pago para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " &
                                                                 oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                            Exit Function
-                        Else
-                            oCompanyDes.GetNewObjectCode(sGroupNum)
-                            ' No se puede añadir, por lo que lo insertamos
-                            sInstNum = oRsCondPago.Fields.Item("InstNum").Value.ToString
-                            If sInstNum.Trim <> "" Then
-                                sSQL = "UPDATE """ & oCompanyDes.CompanyDB & """.""OCTG"" SET ""InstNum"" = " & sInstNum & " " &
+                                Exit Function
+                            Else
+                                oCompanyDes.GetNewObjectCode(sGroupNum)
+                                ' No se puede añadir, por lo que lo insertamos
+                                sInstNum = oRsCondPago.Fields.Item("InstNum").Value.ToString
+                                If sInstNum.Trim <> "" Then
+                                    sSQL = "UPDATE """ & oCompanyDes.CompanyDB & """.""OCTG"" SET ""InstNum"" = " & sInstNum & " " &
                                       "WHERE ""GroupNum"" = " & sGroupNum & "; "
-                                sSQL2 = " INSERT INTO """ & oCompanyDes.CompanyDB & """.""CTG1"" " &
+                                    sSQL2 = " INSERT INTO """ & oCompanyDes.CompanyDB & """.""CTG1"" " &
                                             "SELECT " & sGroupNum & ", ""IntsNo"", ""InstMonth"", ""InstDays"", ""InstPrcnt"" " &
                                             "FROM """ & oObjGlobal.compañia.CompanyDB & """.""CTG1"" t0  " &
-                                            "WHERE t0.""CTGCode"" = " & sGroupNum & "; "
-                                If oObjGlobal.refDi.SQL.executeNonQuery(sSQL) = True Then
-                                    If oObjGlobal.refDi.SQL.executeNonQuery(sSQL2) <> True Then
+                                            "WHERE t0.""CTGCode"" = " & oRsCondPago.Fields.Item("GroupNum").Value.ToString & "; "
+                                    If oObjGlobal.refDi.SQL.executeNonQuery(sSQL) = True Then
+                                        oObjGlobal.refDi.SQL.executeNonQuery(sSQL2)
                                         sSQL2 = "UPDATE D SET  ""InstMonth""=O.""InstMonth"", ""InstDays""= O.""InstDays"", ""InstPrcnt""=O.""InstPrcnt"" "
                                         sSQL2 &= " FROM """ & oObjGlobal.compañia.CompanyDB & """.""CTG1"" O "
                                         sSQL2 &= " INNER JOIN """ & oCompanyDes.CompanyDB & """.""CTG1"" D ON O.""CTGCode""=D.""CTGCode"" And O.""IntsNo""=D.""IntsNo"" "
-                                        sSQL2 &= " WHERE O.""CTGCode"" = " & sGroupNum & "; "
+                                        sSQL2 &= " WHERE O.""CTGCode"" = " & oRsCondPago.Fields.Item("GroupNum").Value.ToString & "; "
                                         If oObjGlobal.refDi.SQL.executeNonQuery(sSQL2) <> True Then
-                                            oObjGlobal.SBOApp.StatusBar.SetText("Error Días de pago para el IC " & sLicTradNum & " - " & oOCRD.CardName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                                            oObjGlobal.SBOApp.StatusBar.SetText(sSQL2 & " - Error Días de pago para el IC " & sLicTradNum & " - " & oOCRD.CardName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                                             Exit Function
                                         End If
+                                    Else
+                                        oObjGlobal.SBOApp.StatusBar.SetText("Error SQL: " & sSQL & " para el IC " & sLicTradNum & " - " & oOCRD.CardName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                                        Exit Function
                                     End If
-                                Else
-                                    oObjGlobal.SBOApp.StatusBar.SetText("Error SQL: " & sSQL & " para el IC " & sLicTradNum & " - " & oOCRD.CardName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                                End If
+                            End If
+                        Else
+                            If oOCTG.Add() <> 0 Then
+                                oObjGlobal.SBOApp.StatusBar.SetText("Error Creando Condiciones de pago para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " &
+                                                                oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                                Exit Function
+                            Else
+                                oCompanyDes.GetNewObjectCode(sGroupNum)
+                                ' No se puede añadir, por lo que lo insertamos
+                                sSQL = "UPDATE """ & oCompanyDes.CompanyDB & """.""OCTG"" SET ""InstNum"" = " & sInstNum & " "
+                                sSQL &= "WHERE GroupNum = " & sGroupNum & "; "
+                                sSQL &= "INSERT INTO """ & oCompanyDes.CompanyDB & """.""CTG1"" "
+                                sSQL &= "SELECT " & sGroupNum & ", ""IntsNo"", ""InstMonth"", ""InstDays"", ""InstPrcnt"" "
+                                sSQL &= "FROM """ & oObjGlobal.compañia.CompanyDB & """.""CTG1"" t0  "
+                                sSQL &= " WHERE t0.""CTGCode"" = " & sGroupNum & "; "
+                                If oObjGlobal.refDi.SQL.executeNonQuery(sSQL) <> True Then
+                                    oObjGlobal.SBOApp.StatusBar.SetText("Error Días de pago para el IC " & sLicTradNum & " - " & oOCRD.CardName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                                     Exit Function
                                 End If
                             End If
                         End If
+                        oOCRD_Destino.PayTermsGrpCode = CType(sGroupNum, Integer)
                     Else
-                        If oOCTG.Add() <> 0 Then
-                            oObjGlobal.SBOApp.StatusBar.SetText("Error Creando Condiciones de pago para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " &
-                                                                oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                            Exit Function
-                        Else
-                            oCompanyDes.GetNewObjectCode(sGroupNum)
-                            ' No se puede añadir, por lo que lo insertamos
-                            sSQL = "UPDATE """ & oCompanyDes.CompanyDB & """.""OCTG"" SET ""InstNum"" = " & sInstNum & " "
-                            sSQL &= "WHERE GroupNum = " & sGroupNum & "; "
-                            sSQL &= "INSERT INTO """ & oCompanyDes.CompanyDB & """.""CTG1"" "
-                            sSQL &= "SELECT " & sGroupNum & ", ""IntsNo"", ""InstMonth"", ""InstDays"", ""InstPrcnt"" "
-                            sSQL &= "FROM """ & oObjGlobal.compañia.CompanyDB & """.""CTG1"" t0  "
-                            sSQL &= " WHERE t0.""CTGCode"" = " & sGroupNum & "; "
-                            If oObjGlobal.refDi.SQL.executeNonQuery(sSQL) <> True Then
-                                oObjGlobal.SBOApp.StatusBar.SetText("Error Días de pago para el IC " & sLicTradNum & " - " & oOCRD.CardName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                                Exit Function
-                            End If
-                        End If
+                        oObjGlobal.SBOApp.StatusBar.SetText("Error grave. No se encuentra en la empresa activa la cond. de pago." & sCondPago, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                        Exit Function
                     End If
-                    oOCRD_Destino.PayTermsGrpCode = CType(sGroupNum, Integer)
-                Else
-                    oObjGlobal.SBOApp.StatusBar.SetText("Error grave. No se encuentra en la empresa activa la cond. de pago." & sCondPago, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                    Exit Function
                 End If
-            End If
 #End Region
 #Region "Días de pago"
-            For i = 0 To oOCRD_Destino.BPPaymentDates.Count - 1
-                oOCRD_Destino.BPPaymentDates.SetCurrentLine(0)
-                oOCRD_Destino.BPPaymentDates.Delete()
-            Next
-            For i = 0 To oOCRD.BPPaymentDates.Count - 1
-                oOCRD.BPPaymentDates.SetCurrentLine(i)
-                oOCRD_Destino.BPPaymentDates.PaymentDate = oOCRD.BPPaymentDates.PaymentDate
-                oOCRD_Destino.BPPaymentDates.Add()
-            Next
+                For i = 0 To oOCRD_Destino.BPPaymentDates.Count - 1
+                    oOCRD_Destino.BPPaymentDates.SetCurrentLine(0)
+                    oOCRD_Destino.BPPaymentDates.Delete()
+                Next
+                For i = 0 To oOCRD.BPPaymentDates.Count - 1
+                    oOCRD.BPPaymentDates.SetCurrentLine(i)
+                    oOCRD_Destino.BPPaymentDates.PaymentDate = oOCRD.BPPaymentDates.PaymentDate
+                    oOCRD_Destino.BPPaymentDates.Add()
+                Next
 #End Region
+                If IsNumeric(oOCRD.IntrestRatePercent) Then
+                    oOCRD_Destino.IntrestRatePercent = oOCRD.IntrestRatePercent
+                End If
+                If IsNumeric(oOCRD.DiscountPercent) Then
+                    oOCRD_Destino.DiscountPercent = oOCRD.DiscountPercent
+                End If
+                If IsNumeric(oOCRD.CreditLimit) Then
+                    oOCRD_Destino.CreditLimit = oOCRD.CreditLimit
+                End If
+                If IsNumeric(oOCRD.DeductionPercent) Then
+                    oOCRD_Destino.DeductionPercent = oOCRD.DeductionPercent
+                End If
 
-            oOCRD_Destino.IntrestRatePercent = oOCRD.IntrestRatePercent
-            oOCRD_Destino.DiscountPercent = oOCRD.DiscountPercent
-            oOCRD_Destino.CreditLimit = oOCRD.CreditLimit
-            oOCRD_Destino.DeductionPercent = oOCRD.DeductionPercent
 #Region "Plazos de reclamación"
-            'Falta ODUT
-            oOCRD_Destino.DunningTerm = oOCRD.DunningTerm
+                'Falta ODUT
+                oOCRD_Destino.DunningTerm = oOCRD.DunningTerm
 #End Region
 
-            oOCRD_Destino.DiscountRelations = oOCRD.DiscountRelations
-            oOCRD_Destino.EffectivePrice = oOCRD.EffectivePrice
-            oOCRD_Destino.EffectiveDiscount = oOCRD.EffectiveDiscount
+                oOCRD_Destino.DiscountRelations = oOCRD.DiscountRelations
+                oOCRD_Destino.EffectivePrice = oOCRD.EffectivePrice
+                oOCRD_Destino.EffectiveDiscount = oOCRD.EffectiveDiscount
 
-            oOCRD_Destino.PartialDelivery = oOCRD.PartialDelivery
-            oOCRD_Destino.BackOrder = oOCRD.BackOrder
-            oOCRD_Destino.NoDiscounts = oOCRD.NoDiscounts
-            oOCRD_Destino.EndorsableChecksFromBP = oOCRD.EndorsableChecksFromBP
-            oOCRD_Destino.AcceptsEndorsedChecks = oOCRD.AcceptsEndorsedChecks
+                oOCRD_Destino.PartialDelivery = oOCRD.PartialDelivery
+                oOCRD_Destino.BackOrder = oOCRD.BackOrder
+                oOCRD_Destino.NoDiscounts = oOCRD.NoDiscounts
+                oOCRD_Destino.EndorsableChecksFromBP = oOCRD.EndorsableChecksFromBP
+                oOCRD_Destino.AcceptsEndorsedChecks = oOCRD.AcceptsEndorsedChecks
 #Region "clase de tarjeta Credit"
-            'Falta la creación
-            oOCRD_Destino.CreditCardCode = oOCRD.CreditCardCode
-            oOCRD_Destino.CreditCardExpiration = oOCRD.CreditCardExpiration
-            oOCRD_Destino.CreditCardNum = oOCRD.CreditCardNum
-            oOCRD_Destino.CreditLimit = oOCRD.CreditLimit
-            oOCRD_Destino.AvarageLate = oOCRD.AvarageLate
+                'Falta la creación
+                If IsNumeric(oOCRD.CreditCardCode) Then
+                    oOCRD_Destino.CreditCardCode = oOCRD.CreditCardCode
+                    oOCRD_Destino.CreditCardExpiration = oOCRD.CreditCardExpiration
+                    oOCRD_Destino.CreditCardNum = oOCRD.CreditCardNum
+                    oOCRD_Destino.CreditLimit = oOCRD.CreditLimit
+                    If IsNumeric(oOCRD.AvarageLate) Then
+                        oOCRD_Destino.AvarageLate = oOCRD.AvarageLate
+                    End If
+                End If
 #End Region
 #Region "Prioridad"
-            sPrioridad = CType(oOCRD.Priority, String)
-            If sPrioridad <> "-1" Then
-                oOBPP_Destino = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oBPPriorities), SAPbobsCOM.BPPriorities)
-                sSQL = "SELECT * FROM OBPP WHERE ""PrioCode""='" & sPrioridad & "' "
-                oRsPrioridad.DoQuery(sSQL)
-                If oRsPrioridad.RecordCount > 0 Then
-                    If oOBPP_Destino.GetByKey(CType(sPrioridad, Integer)) = True Then
-                        oOBPP_Destino.PriorityDescription = oRsPrioridad.Fields.Item("PrioDesc").Value.ToString
-                        If oOBPP_Destino.Update() <> 0 Then
-                            oObjGlobal.SBOApp.StatusBar.SetText("Error Actualizando Prioridad para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " & oObjGlobal.compañia.GetLastErrorCode & " / " & oObjGlobal.compañia.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                            Exit Function
-                        Else
-                            oCompanyDes.GetNewObjectCode(sPrioridad)
-                        End If
-                    Else
-                        oOBPP_Destino.Priority = CType(sPrioridad, Integer)
-                        oOBPP_Destino.PriorityDescription = oRsPrioridad.Fields.Item("PrioDesc").Value.ToString
-                        If oOBPP_Destino.Add() <> 0 Then
-                            oObjGlobal.SBOApp.StatusBar.SetText("Error Creando Prioridad para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " & oObjGlobal.compañia.GetLastErrorCode & " / " & oObjGlobal.compañia.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                            Exit Function
-                        Else
-                            oCompanyDes.GetNewObjectCode(sPrioridad)
+                sPrioridad = CType(oOCRD.Priority, String)
+                    If sPrioridad <> "-1" Then
+                        oOBPP_Destino = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oBPPriorities), SAPbobsCOM.BPPriorities)
+                        sSQL = "SELECT * FROM OBPP WHERE ""PrioCode""='" & sPrioridad & "' "
+                        oRsPrioridad.DoQuery(sSQL)
+                        If oRsPrioridad.RecordCount > 0 Then
+                            If oOBPP_Destino.GetByKey(CType(sPrioridad, Integer)) = True Then
+                                oOBPP_Destino.PriorityDescription = oRsPrioridad.Fields.Item("PrioDesc").Value.ToString
+                                If oOBPP_Destino.Update() <> 0 Then
+                                    oObjGlobal.SBOApp.StatusBar.SetText("Error Actualizando Prioridad para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " & oObjGlobal.compañia.GetLastErrorCode & " / " & oObjGlobal.compañia.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                                    Exit Function
+                                Else
+                                    oCompanyDes.GetNewObjectCode(sPrioridad)
+                                End If
+                            Else
+                                oOBPP_Destino.Priority = CType(sPrioridad, Integer)
+                                oOBPP_Destino.PriorityDescription = oRsPrioridad.Fields.Item("PrioDesc").Value.ToString
+                                If oOBPP_Destino.Add() <> 0 Then
+                                    oObjGlobal.SBOApp.StatusBar.SetText("Error Creando Prioridad para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " & oObjGlobal.compañia.GetLastErrorCode & " / " & oObjGlobal.compañia.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                                    Exit Function
+                                Else
+                                    oCompanyDes.GetNewObjectCode(sPrioridad)
+                                End If
+                            End If
+                            oOCRD_Destino.Priority = CType(sPrioridad, Integer)
                         End If
                     End If
-                    oOCRD_Destino.Priority = CType(sPrioridad, Integer)
-                End If
-            End If
 #End Region
-            oOCRD_Destino.IBAN = oOCRD.IBAN
+                oOCRD_Destino.IBAN = oOCRD.IBAN
 #Region "Vacaciones"
-            'Falta definir
+                'Falta definir
 #End Region
-            'Pestaña Ejecución de pago
+                'Pestaña Ejecución de pago
 #Region "Ejecución de pago"
-            oOCRD_Destino.HouseBankCountry = oOCRD.HouseBankCountry
-            oOCRD_Destino.HouseBank = oOCRD.HouseBank
-            oOCRD_Destino.HouseBankBranch = oOCRD.HouseBankBranch
-            oOCRD_Destino.HouseBankAccount = oOCRD.HouseBankAccount
+                oOCRD_Destino.HouseBankCountry = oOCRD.HouseBankCountry
+                oOCRD_Destino.HouseBank = oOCRD.HouseBank
+                oOCRD_Destino.HouseBankBranch = oOCRD.HouseBankBranch
+                oOCRD_Destino.HouseBankAccount = oOCRD.HouseBankAccount
 
-            oOCRD_Destino.DME = oOCRD.DME
-            oOCRD_Destino.InstructionKey = oOCRD.InstructionKey
-            oOCRD_Destino.ReferenceDetails = oOCRD.ReferenceDetails
+                oOCRD_Destino.DME = oOCRD.DME
+                oOCRD_Destino.InstructionKey = oOCRD.InstructionKey
+                oOCRD_Destino.ReferenceDetails = oOCRD.ReferenceDetails
 
-            oOCRD_Destino.PaymentBlock = oOCRD.PaymentBlock
-            oOCRD_Destino.SinglePayment = oOCRD.SinglePayment
+                oOCRD_Destino.PaymentBlock = oOCRD.PaymentBlock
+                oOCRD_Destino.SinglePayment = oOCRD.SinglePayment
 
-            oOCRD_Destino.BankChargesAllocationCode = oOCRD.BankChargesAllocationCode
+                oOCRD_Destino.BankChargesAllocationCode = oOCRD.BankChargesAllocationCode
 
 
-            oOCRD_Destino.BPPaymentMethods.Delete()
+                oOCRD_Destino.BPPaymentMethods.Delete()
 #Region "Vía de pago"
-            For i = 0 To oOCRD.BPPaymentMethods.Count - 1
-                oOCRD.BPPaymentMethods.SetCurrentLine(i)
-                'Comprobamos que exista la vía
-                Dim sViaPago As String = oOCRD.BPPaymentMethods.PaymentMethodCode
-                sSQL = "Select * FROM OPYM WHERE ""PayMethCod"" = '" & sViaPago & "' "
-                oRsOPYM.DoQuery(sSQL)
-                oOPYM = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oWizardPaymentMethods), SAPbobsCOM.WizardPaymentMethods)
-                If sViaPago.Trim <> "" Then
-                    If oRsOPYM.RecordCount <> 0 Then
-                        If oOPYM.GetByKey(sViaPago) = True Then
-                            sExiste_OPYM = True
-                        Else
-                            sExiste_OPYM = False
-                            oOPYM.PaymentMethodCode = sViaPago
-                        End If
-                        oOPYM.Description = oRsOPYM.Fields.Item("Descript").Value.ToString
-                        Select Case oRsOPYM.Fields.Item("Descript").Value.ToString
-                            Case "Y" : oOPYM.Active = SAPbobsCOM.BoYesNoEnum.tYES
-                            Case Else : oOPYM.Active = SAPbobsCOM.BoYesNoEnum.tNO
-                        End Select
-                        Select Case oRsOPYM.Fields.Item("Type").Value.ToString
-                            Case "I" : oOPYM.Type = SAPbobsCOM.BoPaymentTypeEnum.boptIncoming
-                            Case Else : oOPYM.Type = SAPbobsCOM.BoPaymentTypeEnum.boptOutgoing
-                        End Select
+                    For i = 0 To oOCRD.BPPaymentMethods.Count - 1
+                        oOCRD.BPPaymentMethods.SetCurrentLine(i)
+                        'Comprobamos que exista la vía
+                        Dim sViaPago As String = oOCRD.BPPaymentMethods.PaymentMethodCode
+                        sSQL = "Select * FROM OPYM WHERE ""PayMethCod"" = '" & sViaPago & "' "
+                        oRsOPYM.DoQuery(sSQL)
+                        oOPYM = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oWizardPaymentMethods), SAPbobsCOM.WizardPaymentMethods)
+                        If sViaPago.Trim <> "" Then
+                            If oRsOPYM.RecordCount <> 0 Then
+                                If oOPYM.GetByKey(sViaPago) = True Then
+                                    sExiste_OPYM = True
+                                Else
+                                    sExiste_OPYM = False
+                                    oOPYM.PaymentMethodCode = sViaPago
+                                End If
+                                oOPYM.Description = oRsOPYM.Fields.Item("Descript").Value.ToString
+                                Select Case oRsOPYM.Fields.Item("Descript").Value.ToString
+                                    Case "Y" : oOPYM.Active = SAPbobsCOM.BoYesNoEnum.tYES
+                                    Case Else : oOPYM.Active = SAPbobsCOM.BoYesNoEnum.tNO
+                                End Select
+                                Select Case oRsOPYM.Fields.Item("Type").Value.ToString
+                                    Case "I" : oOPYM.Type = SAPbobsCOM.BoPaymentTypeEnum.boptIncoming
+                                    Case Else : oOPYM.Type = SAPbobsCOM.BoPaymentTypeEnum.boptOutgoing
+                                End Select
 
-                        'oOPYM.= oRsOPYM.Fields.Item("BankTransf").Value.ToString
-                        oOPYM.BankCountry = oRsOPYM.Fields.Item("BankCountr").Value.ToString
-                        oOPYM.DefaultBank = oRsOPYM.Fields.Item("BnkDflt").Value.ToString
-                        oOPYM.DefaultAccount = oRsOPYM.Fields.Item("DflAccount").Value.ToString
-                        'Porcentaje gastos no lo veo
-                        Select Case oRsOPYM.Fields.Item("GrpByDate").Value.ToString
-                            Case "Y" : oOPYM.GroupByDate = SAPbobsCOM.BoYesNoEnum.tYES
-                            Case Else : oOPYM.GroupByDate = SAPbobsCOM.BoYesNoEnum.tNO
-                        End Select
+                                'oOPYM.= oRsOPYM.Fields.Item("BankTransf").Value.ToString
+                                oOPYM.BankCountry = oRsOPYM.Fields.Item("BankCountr").Value.ToString
+                                oOPYM.DefaultBank = oRsOPYM.Fields.Item("BnkDflt").Value.ToString
+                                oOPYM.DefaultAccount = oRsOPYM.Fields.Item("DflAccount").Value.ToString
+                                'Porcentaje gastos no lo veo
+                                Select Case oRsOPYM.Fields.Item("GrpByDate").Value.ToString
+                                    Case "Y" : oOPYM.GroupByDate = SAPbobsCOM.BoYesNoEnum.tYES
+                                    Case Else : oOPYM.GroupByDate = SAPbobsCOM.BoYesNoEnum.tNO
+                                End Select
 
-                        If sExiste_OPYM = True Then
-                            If oOPYM.Update() <> 0 Then
-                                oObjGlobal.SBOApp.StatusBar.SetText("Error actualizando Vía de pago para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " & oObjGlobal.compañia.GetLastErrorCode & " / " & oObjGlobal.compañia.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                                Exit Function
-                            Else
-                                oCompanyDes.GetNewObjectCode(sViaPago)
-                            End If
-                        Else
-                            If oOPYM.Add() <> 0 Then
-                                oObjGlobal.SBOApp.StatusBar.SetText("Error Creando Vía de pago para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " & oObjGlobal.compañia.GetLastErrorCode & " / " & oObjGlobal.compañia.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                                Exit Function
-                            Else
-                                oCompanyDes.GetNewObjectCode(sViaPago)
+                                If sExiste_OPYM = True Then
+                                    If oOPYM.Update() <> 0 Then
+                                        oObjGlobal.SBOApp.StatusBar.SetText("Error actualizando Vía de pago para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " & oObjGlobal.compañia.GetLastErrorCode & " / " & oObjGlobal.compañia.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                                        Exit Function
+                                    Else
+                                        oCompanyDes.GetNewObjectCode(sViaPago)
+                                    End If
+                                Else
+                                    If oOPYM.Add() <> 0 Then
+                                        oObjGlobal.SBOApp.StatusBar.SetText("Error Creando Vía de pago para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " & oObjGlobal.compañia.GetLastErrorCode & " / " & oObjGlobal.compañia.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                                        Exit Function
+                                    Else
+                                        oCompanyDes.GetNewObjectCode(sViaPago)
+                                    End If
+                                End If
                             End If
                         End If
-                    End If
-                End If
-                oOCRD_Destino.BPPaymentMethods.PaymentMethodCode = oOCRD.BPPaymentMethods.PaymentMethodCode
-                oOCRD_Destino.BPPaymentMethods.Add()
-            Next
-            oOCRD_Destino.PeymentMethodCode = oOCRD.PeymentMethodCode
+                        oOCRD_Destino.BPPaymentMethods.PaymentMethodCode = oOCRD.BPPaymentMethods.PaymentMethodCode
+                        oOCRD_Destino.BPPaymentMethods.Add()
+                    Next
+                    oOCRD_Destino.PeymentMethodCode = oOCRD.PeymentMethodCode
 #End Region
 #End Region
-            'Pestaña finanzas
+                'Pestaña finanzas
 #Region "Pestaña finanzas"
-            oOCRD_Destino.FatherCard = oOCRD.FatherCard
-            oOCRD_Destino.FatherType = oOCRD.FatherType
+                oOCRD_Destino.FatherCard = oOCRD.FatherCard
+                oOCRD_Destino.FatherType = oOCRD.FatherType
 
-            oOCRD_Destino.DownPaymentInterimAccount = oOCRD.DownPaymentInterimAccount
-            If oOCRD.DownPaymentClearAct.ToString.Trim <> "" Then
-                oOCRD_Destino.DownPaymentClearAct = oOCRD.DownPaymentClearAct
-            End If
-            If oOCRD.DownPaymentInterimAccount.ToString.Trim <> "" Then
-                oOCRD_Destino.DownPaymentInterimAccount = oOCRD.DownPaymentInterimAccount
-            End If
+                If oOCRD.DownPaymentClearAct.ToString.Trim <> "" Then
+                    oOCRD_Destino.DownPaymentClearAct = oOCRD.DownPaymentClearAct
+                End If
+                If oOCRD.DownPaymentInterimAccount.ToString.Trim <> "" Then
+                    oOCRD_Destino.DownPaymentInterimAccount = oOCRD.DownPaymentInterimAccount
+                End If
 
-            'Falta una cuenta y las del botón
+                'Falta una cuenta y las del botón
 
-            'Falta connbp
+                'Falta connbp
 
-            oOCRD_Destino.PlanningGroup = oOCRD.PlanningGroup
-            oOCRD_Destino.Affiliate = oOCRD.Affiliate
+                oOCRD_Destino.PlanningGroup = oOCRD.PlanningGroup
+                oOCRD_Destino.Affiliate = oOCRD.Affiliate
 
-            'Pestaña de impuesto
-            oOCRD_Destino.Equalization = oOCRD.Equalization
-            oOCRD_Destino.VatIDNum = oOCRD.VatIDNum
-            oOCRD_Destino.ECommerceMerchantID = oOCRD.ECommerceMerchantID
-            oOCRD_Destino.AccrualCriteria = oOCRD.AccrualCriteria
-            oOCRD_Destino.CertificateNumber = oOCRD.CertificateNumber
-            oOCRD_Destino.ExpirationDate = oOCRD.ExpirationDate
+                'Pestaña de impuesto
+                oOCRD_Destino.Equalization = oOCRD.Equalization
+                oOCRD_Destino.VatIDNum = oOCRD.VatIDNum
+                oOCRD_Destino.ECommerceMerchantID = oOCRD.ECommerceMerchantID
+                oOCRD_Destino.AccrualCriteria = oOCRD.AccrualCriteria
+                oOCRD_Destino.CertificateNumber = oOCRD.CertificateNumber
+                oOCRD_Destino.ExpirationDate = oOCRD.ExpirationDate
 
-            oOCRD_Destino.OperationCode347 = oOCRD.OperationCode347
-            oOCRD_Destino.InsuranceOperation347 = oOCRD.InsuranceOperation347
+                oOCRD_Destino.OperationCode347 = oOCRD.OperationCode347
+                oOCRD_Destino.InsuranceOperation347 = oOCRD.InsuranceOperation347
 
-            oOCRD_Destino.VatLiable = oOCRD.VatLiable
-            oOCRD_Destino.VatGroup = oOCRD.VatGroup
+                oOCRD_Destino.VatLiable = oOCRD.VatLiable
+                oOCRD_Destino.VatGroup = oOCRD.VatGroup
 #End Region
 #Region "Pestaña propiedades"
-            For i = 1 To 64
-                oOCRD_Destino.Properties(i) = oOCRD.Properties(i)
-            Next
+                    For i = 1 To 64
+                        oOCRD_Destino.Properties(i) = oOCRD.Properties(i)
+                    Next
 #End Region
-            oOCRD_Destino.FreeText = oOCRD.FreeText
+                oOCRD_Destino.FreeText = oOCRD.FreeText
 #Region "Documentos electrónicos"
-            oOCRD_Destino.EDocGenerationType = oOCRD.EDocGenerationType
-            oOCRD_Destino.FCERelevant = oOCRD.FCERelevant
-            oOCRD_Destino.FCEValidateBaseDelivery = oOCRD.FCEValidateBaseDelivery
+                oOCRD_Destino.EDocGenerationType = oOCRD.EDocGenerationType
+                oOCRD_Destino.FCERelevant = oOCRD.FCERelevant
+                oOCRD_Destino.FCEValidateBaseDelivery = oOCRD.FCEValidateBaseDelivery
 #End Region
 #Region "Campos de usuario"
-            sSQL = "select ""AliasID"" FROM """ & oCompanyDes.CompanyDB & """.""CUFD"" WHERE ""TableID"" = 'OCRD';"
-            oRsCamposUsuario.DoQuery(sSQL)
-            For i = 0 To oRsCamposUsuario.RecordCount - 1
-                Try
-                    Dim sCampo As String = "U_" & oRsCamposUsuario.Fields.Item("AliasID").Value.ToString
-                    oOCRD_Destino.UserFields.Fields.Item(sCampo).Value = oOCRD.UserFields.Fields.Item(sCampo).Value
-                Catch ex As Exception
+                sSQL = "select ""AliasID"" FROM """ & oCompanyDes.CompanyDB & """.""CUFD"" WHERE ""TableID"" = 'OCRD';"
+                oRsCamposUsuario.DoQuery(sSQL)
+                For i = 0 To oRsCamposUsuario.RecordCount - 1
+                    Try
+                        Dim sCampo As String = "U_" & oRsCamposUsuario.Fields.Item("AliasID").Value.ToString
+                        oOCRD_Destino.UserFields.Fields.Item(sCampo).Value = oOCRD.UserFields.Fields.Item(sCampo).Value
+                    Catch ex As Exception
 
-                End Try
-                oRsCamposUsuario.MoveNext()
-            Next
+                    End Try
+                    oRsCamposUsuario.MoveNext()
+                Next
 #End Region
+            End If
 
             If sExiste_IC = False Then
                 If sCardType = "C" Then
@@ -920,6 +943,47 @@ Public Class EXO_GLOBALES
 #End Region
         End Try
     End Function
+    Public Shared Function Comprueba_Proveedor_en_Master(ByRef oObjGlobal As EXO_UIAPI.EXO_UIAPI, ByVal sLicTradNum As String, ByVal sCardType As String) As Boolean
+        Comprueba_Proveedor_en_Master = False
+#Region "Variables"
+        Dim oRs As SAPbobsCOM.Recordset = Nothing
+        Dim sSQL As String = ""
+        Dim OdtEmpresas As System.Data.DataTable = Nothing
+        Dim sBBDD As String = "" : Dim sUser As String = "" : Dim sPass As String = ""
+        Dim oCompanyMaster As SAPbobsCOM.Company = Nothing
+#End Region
+        Try
+            OdtEmpresas = New System.Data.DataTable
+            OdtEmpresas.Clear()
+            sSQL = "SELECT * FROM ""@EXO_IPANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_TIPO""='M' "
+            OdtEmpresas = oObjGlobal.refDi.SQL.sqlComoDataTable(sSQL)
+            If OdtEmpresas.Rows.Count > 0 Then
+                For Each dr As DataRow In OdtEmpresas.Rows
+                    sBBDD = dr.Item("U_EXO_BBDD").ToString : sUser = dr.Item("U_EXO_USER").ToString : sPass = dr.Item("U_EXO_PASS").ToString
+                    EXO_CONEXIONES.Connect_Company(oCompanyMaster, oObjGlobal, sUser, sPass, sBBDD)
+                    If sBBDD <> oObjGlobal.compañia.CompanyDB.ToString Then
+                        sSQL = "SELECT ""CardCode"" FROM OCRD WHERE ""LicTradNum""='" & sLicTradNum & "' and ""CardType""='" & sCardType & "' "
+                        oRs = CType(oCompanyMaster.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset), SAPbobsCOM.Recordset)
+                        If oRs.RecordCount > 0 Then
+                            Comprueba_Proveedor_en_Master = True
+                        Else
+                            oObjGlobal.SBOApp.StatusBar.SetText("Proveedor no creado en la empresa Consolidación. Por favor, dadlo de alta en la empresa Consolidación. ", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                            Comprueba_Proveedor_en_Master = False
+                        End If
+                    Else
+                        Comprueba_Proveedor_en_Master = True
+                    End If
+                Next
+            End If
+
+        Catch ex As Exception
+            Throw ex
+        Finally
+            EXO_CONEXIONES.Disconnect_Company(oCompanyMaster)
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oRs, Object))
+        End Try
+    End Function
+
     Public Shared Function Sincroniza_proveedor(ByRef oOCRD As SAPbobsCOM.BusinessPartners, ByRef oCompanyMaster As SAPbobsCOM.Company, ByRef oObjGlobal As EXO_UIAPI.EXO_UIAPI) As Boolean
 #Region "Variables"
         Dim oOCRD_Master As SAPbobsCOM.BusinessPartners = Nothing
@@ -1617,6 +1681,7 @@ Public Class EXO_GLOBALES
                     oObjGlobal.SBOApp.StatusBar.SetText("Error actualizando IC - " & sLicTradNum & " - " & oOCRD.CardName & " - " &
                                                                 oObjGlobal.compañia.GetLastErrorCode & " / " & oObjGlobal.compañia.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                 Else
+                    'sSQL = "UPDATE OCRD SET ""DebPayAcct""=""U_EXO_CTAP"" WHERE ""CardCode""='" oocrd.CardCode & "' "
                     oObjGlobal.SBOApp.StatusBar.SetText("IC Actualizado - " & sLicTradNum & " - " & oOCRD.CardName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
                 End If
                 Sincroniza_proveedor = True

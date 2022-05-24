@@ -147,7 +147,7 @@ Public Class EXO_OCRD
                 sCardType = oform.DataSources.DBDataSources.Item("OCRD").GetValue("CardType", 0).ToString.Trim
                 sSerie = CType(oform.Items.Item("1320002080").Specific, SAPbouiCOM.ComboBox).Selected.Description
                 sBBDD = objGlobal.refDi.compañia.CompanyDB
-                sSQL = "SELECT TOP 1 ""U_EXO_BBDD"" FROM ""@EXO_IPANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_TIPO""='M' "
+                sSQL = "SELECT TOP 1 ""U_EXO_BBDD"" FROM ""@EXO_IPANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_TIPO""='M' ORDER BY ""LineId""  "
                 sBBDDDMaster = objGlobal.refDi.SQL.sqlStringB1(sSQL)
 
                 ' Si estamos en la master enviamos datos a los destinos
@@ -155,7 +155,7 @@ Public Class EXO_OCRD
                     'If sBBDD = sBBDDDMaster And ((sCardType = "C" And sSerie = "CI")) Then
                     OdtEmpresas = New System.Data.DataTable
                     OdtEmpresas.Clear()
-                    sSQL = "SELECT * FROM ""@EXO_IPANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_TIPO""='D' "
+                    sSQL = "SELECT * FROM ""@EXO_IPANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_TIPO""='D' ORDER BY ""LineId"" "
                     OdtEmpresas = objGlobal.refDi.SQL.sqlComoDataTable(sSQL)
                     If OdtEmpresas.Rows.Count > 0 Then
                         oOCRD = CType(objGlobal.compañia.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oBusinessPartners), SAPbobsCOM.BusinessPartners)
@@ -223,8 +223,10 @@ Public Class EXO_OCRD
             Intercompany_After = True
 
         Catch exCOM As System.Runtime.InteropServices.COMException
+            oform.Freeze(False)
             Throw exCOM
         Catch ex As Exception
+            oform.Freeze(False)
             Throw ex
         Finally
             oform.Freeze(False)
@@ -237,6 +239,7 @@ Public Class EXO_OCRD
     Public Overrides Function SBOApp_FormDataEvent(ByVal infoEvento As BusinessObjectInfo) As Boolean
         Dim oForm As SAPbouiCOM.Form = Nothing
         Dim bEstado As String = ""
+        Dim sLicTradNum As String = "" : Dim sCardType As String = ""
         Try
             oForm = objGlobal.SBOApp.Forms.Item(infoEvento.FormUID)
             If infoEvento.BeforeAction = True Then
@@ -247,9 +250,17 @@ Public Class EXO_OCRD
                             Case SAPbouiCOM.BoEventTypes.et_FORM_DATA_LOAD
 
                             Case SAPbouiCOM.BoEventTypes.et_FORM_DATA_UPDATE
-
+                                sLicTradNum = oForm.DataSources.DBDataSources.Item("OCRD").GetValue("LicTradNum", 0).ToString.Trim
+                                sCardType = oForm.DataSources.DBDataSources.Item("OCRD").GetValue("CardType", 0).ToString.Trim
+                                If EXO_GLOBALES.Comprueba_Proveedor_en_Master(objGlobal, sLicTradNum, sCardType) = False Then
+                                    Return False
+                                End If
                             Case SAPbouiCOM.BoEventTypes.et_FORM_DATA_ADD
-
+                                sLicTradNum = oForm.DataSources.DBDataSources.Item("OCRD").GetValue("LicTradNum", 0).ToString.Trim
+                                sCardType = oForm.DataSources.DBDataSources.Item("OCRD").GetValue("CardType", 0).ToString.Trim
+                                If EXO_GLOBALES.Comprueba_Proveedor_en_Master(objGlobal, sLicTradNum, sCardType) = False Then
+                                    Return False
+                                End If
                             Case SAPbouiCOM.BoEventTypes.et_FORM_DATA_DELETE
 
                         End Select
