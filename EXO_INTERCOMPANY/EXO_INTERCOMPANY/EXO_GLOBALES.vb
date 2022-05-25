@@ -520,6 +520,49 @@ Public Class EXO_GLOBALES
 #End Region
                 'Pestaña condiciones de pago
 #Region "Condiciones de pago"
+#Region "Bancos"
+                sSQL = "DELETE FROM """ & oCompanyDes.CompanyDB & """.""OCRB"" Where ""CardCode""='" & sCardCode & "' "
+                oObjGlobal.refDi.SQL.executeNonQuery(sSQL)
+                For b = 0 To oOCRD_Destino.BPBankAccounts.Count - 1
+                    oOCRD_Destino.BPBankAccounts.SetCurrentLine(b)
+                    oOCRD_Destino.BPBankAccounts.Delete()
+                Next
+                For i = 0 To oOCRD.BPBankAccounts.Count - 1
+                    oOCRD.BPBankAccounts.SetCurrentLine(i)
+                    If oOCRD.BPBankAccounts.AccountNo <> "" Then
+                        oOCRD_Destino.BPBankAccounts.AccountNo = oOCRD.BPBankAccounts.AccountNo
+                        oOCRD_Destino.BPBankAccounts.ABARoutingNumber = oOCRD.BPBankAccounts.ABARoutingNumber
+                        oOCRD_Destino.BPBankAccounts.AccountName = oOCRD.BPBankAccounts.AccountName
+                        oOCRD_Destino.BPBankAccounts.BankCode = oOCRD.BPBankAccounts.BankCode
+                        oOCRD_Destino.BPBankAccounts.BICSwiftCode = oOCRD.BPBankAccounts.BICSwiftCode
+                        oOCRD_Destino.BPBankAccounts.BIK = oOCRD.BPBankAccounts.BIK
+                        oOCRD_Destino.BPBankAccounts.Block = oOCRD.BPBankAccounts.Block
+                        oOCRD_Destino.BPBankAccounts.Branch = oOCRD.BPBankAccounts.Branch
+                        oOCRD_Destino.BPBankAccounts.BuildingFloorRoom = oOCRD.BPBankAccounts.BuildingFloorRoom
+                        oOCRD_Destino.BPBankAccounts.City = oOCRD.BPBankAccounts.City
+                        oOCRD_Destino.BPBankAccounts.ControlKey = oOCRD.BPBankAccounts.ControlKey
+                        oOCRD_Destino.BPBankAccounts.CorrespondentAccount = oOCRD.BPBankAccounts.CorrespondentAccount
+                        oOCRD_Destino.BPBankAccounts.Country = oOCRD.BPBankAccounts.Country
+                        oOCRD_Destino.BPBankAccounts.Fax = oOCRD.BPBankAccounts.Fax
+                        oOCRD_Destino.BPBankAccounts.IBAN = oOCRD.BPBankAccounts.IBAN
+                        oOCRD_Destino.BPBankAccounts.ISRBillerID = oOCRD.BPBankAccounts.ISRBillerID
+                        oOCRD_Destino.BPBankAccounts.ISRType = oOCRD.BPBankAccounts.ISRType
+                        oOCRD_Destino.BPBankAccounts.MandateExpDate = oOCRD.BPBankAccounts.MandateExpDate
+                        oOCRD_Destino.BPBankAccounts.MandateID = oOCRD.BPBankAccounts.MandateID
+                        oOCRD_Destino.BPBankAccounts.Phone = oOCRD.BPBankAccounts.Phone
+                        oOCRD_Destino.BPBankAccounts.SEPASeqType = oOCRD.BPBankAccounts.SEPASeqType
+                        oOCRD_Destino.BPBankAccounts.SignatureDate = oOCRD.BPBankAccounts.SignatureDate
+                        oOCRD_Destino.BPBankAccounts.State = oOCRD.BPBankAccounts.State
+                        oOCRD_Destino.BPBankAccounts.Street = oOCRD.BPBankAccounts.Street
+                        oOCRD_Destino.BPBankAccounts.UserNo1 = oOCRD.BPBankAccounts.UserNo1
+                        oOCRD_Destino.BPBankAccounts.UserNo2 = oOCRD.BPBankAccounts.UserNo2
+                        oOCRD_Destino.BPBankAccounts.UserNo3 = oOCRD.BPBankAccounts.UserNo3
+                        oOCRD_Destino.BPBankAccounts.UserNo4 = oOCRD.BPBankAccounts.UserNo4
+                        oOCRD_Destino.BPBankAccounts.ZipCode = oOCRD.BPBankAccounts.ZipCode
+                        oOCRD_Destino.BPBankAccounts.Add()
+                    End If
+                Next
+#End Region
                 ' oObjGlobal.SBOApp.StatusBar.SetText("Condición de pago:" & sCondPago, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
                 If sCondPago <> "" Then
                     oOCTG = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPaymentTermsTypes), SAPbobsCOM.PaymentTermsTypes)
@@ -1339,6 +1382,49 @@ Public Class EXO_GLOBALES
 #End Region
                 'Pestaña condiciones de pago
 #Region "Condiciones de pago"
+#Region "Bancos"
+                sSQL = "DELETE FROM """ & oObjGlobal.compañia.CompanyDB & """.""OCRB"" Where ""CardCode""='" & sCardCode & "' "
+                oObjGlobal.refDi.SQL.executeNonQuery(sSQL)
+                For b = 0 To oOCRD.BPBankAccounts.Count - 1
+                    oOCRD.BPBankAccounts.SetCurrentLine(b)
+                    oOCRD.BPBankAccounts.Delete()
+                Next
+                For i = 0 To oOCRD_Master.BPBankAccounts.Count - 1
+                    oOCRD_Master.BPBankAccounts.SetCurrentLine(i)
+                    If oOCRD_Master.BPBankAccounts.AccountNo <> "" Then
+                        oOCRD.BPBankAccounts.AccountNo = oOCRD_Master.BPBankAccounts.AccountNo
+                        oOCRD.BPBankAccounts.ABARoutingNumber = oOCRD_Master.BPBankAccounts.ABARoutingNumber
+                        oOCRD.BPBankAccounts.AccountName = oOCRD_Master.BPBankAccounts.AccountName
+                        oOCRD.BPBankAccounts.BankCode = oOCRD_Master.BPBankAccounts.BankCode
+                        oOCRD.BPBankAccounts.BICSwiftCode = oOCRD_Master.BPBankAccounts.BICSwiftCode
+                        oOCRD.BPBankAccounts.BIK = oOCRD_Master.BPBankAccounts.BIK
+                        oOCRD.BPBankAccounts.Block = oOCRD_Master.BPBankAccounts.Block
+                        oOCRD.BPBankAccounts.Branch = oOCRD_Master.BPBankAccounts.Branch
+                        oOCRD.BPBankAccounts.BuildingFloorRoom = oOCRD_Master.BPBankAccounts.BuildingFloorRoom
+                        oOCRD.BPBankAccounts.City = oOCRD_Master.BPBankAccounts.City
+                        oOCRD.BPBankAccounts.ControlKey = oOCRD_Master.BPBankAccounts.ControlKey
+                        oOCRD.BPBankAccounts.CorrespondentAccount = oOCRD_Master.BPBankAccounts.CorrespondentAccount
+                        oOCRD.BPBankAccounts.Country = oOCRD_Master.BPBankAccounts.Country
+                        oOCRD.BPBankAccounts.Fax = oOCRD_Master.BPBankAccounts.Fax
+                        oOCRD.BPBankAccounts.IBAN = oOCRD_Master.BPBankAccounts.IBAN
+                        oOCRD.BPBankAccounts.ISRBillerID = oOCRD_Master.BPBankAccounts.ISRBillerID
+                        oOCRD.BPBankAccounts.ISRType = oOCRD_Master.BPBankAccounts.ISRType
+                        oOCRD.BPBankAccounts.MandateExpDate = oOCRD_Master.BPBankAccounts.MandateExpDate
+                        oOCRD.BPBankAccounts.MandateID = oOCRD_Master.BPBankAccounts.MandateID
+                        oOCRD.BPBankAccounts.Phone = oOCRD_Master.BPBankAccounts.Phone
+                        oOCRD.BPBankAccounts.SEPASeqType = oOCRD_Master.BPBankAccounts.SEPASeqType
+                        oOCRD.BPBankAccounts.SignatureDate = oOCRD_Master.BPBankAccounts.SignatureDate
+                        oOCRD.BPBankAccounts.State = oOCRD_Master.BPBankAccounts.State
+                        oOCRD.BPBankAccounts.Street = oOCRD_Master.BPBankAccounts.Street
+                        oOCRD.BPBankAccounts.UserNo1 = oOCRD_Master.BPBankAccounts.UserNo1
+                        oOCRD.BPBankAccounts.UserNo2 = oOCRD_Master.BPBankAccounts.UserNo2
+                        oOCRD.BPBankAccounts.UserNo3 = oOCRD_Master.BPBankAccounts.UserNo3
+                        oOCRD.BPBankAccounts.UserNo4 = oOCRD_Master.BPBankAccounts.UserNo4
+                        oOCRD.BPBankAccounts.ZipCode = oOCRD_Master.BPBankAccounts.ZipCode
+                        oOCRD.BPBankAccounts.Add()
+                    End If
+                Next
+#End Region
                 sCondPago = CType(oOCRD_Master.PayTermsGrpCode, String)
                 If sCondPago <> "" Then
                     oOCTG_Master = CType(oCompanyMaster.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oPaymentTermsTypes), SAPbobsCOM.PaymentTermsTypes)
