@@ -452,6 +452,9 @@ Public Class EXO_GLOBALES
 
                 'Pestaña Personas de contacto
 #Region "Personas de contacto"
+                'Eliminamos direcciones
+                sSQL = "DELETE FROM """ & oCompanyDes.CompanyDB & """.""OCPR"" Where ""CardCode""='" & sCardCode & "' "
+                oObjGlobal.refDi.SQL.executeNonQuery(sSQL)
                 For i = 0 To oOCRD_Destino.ContactEmployees.Count - 1
                     oOCRD_Destino.ContactEmployees.SetCurrentLine(0)
                     oOCRD_Destino.ContactEmployees.Delete()
@@ -962,8 +965,9 @@ Public Class EXO_GLOBALES
                     sBBDD = dr.Item("U_EXO_BBDD").ToString : sUser = dr.Item("U_EXO_USER").ToString : sPass = dr.Item("U_EXO_PASS").ToString
                     EXO_CONEXIONES.Connect_Company(oCompanyMaster, oObjGlobal, sUser, sPass, sBBDD)
                     If sBBDD <> oObjGlobal.compañia.CompanyDB.ToString Then
-                        sSQL = "SELECT ""CardCode"" FROM OCRD WHERE ""LicTradNum""='" & sLicTradNum & "' and ""CardType""='" & sCardType & "' "
+                        sSQL = "SELECT ""CardCode"" FROM """ & sBBDD & """.""OCRD"" WHERE ""LicTradNum""='" & sLicTradNum & "' and ""CardType""='" & sCardType & "' "
                         oRs = CType(oCompanyMaster.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset), SAPbobsCOM.Recordset)
+                        oRs.DoQuery(sSQL)
                         If oRs.RecordCount > 0 Then
                             Comprueba_Proveedor_en_Master = True
                         Else
@@ -1265,6 +1269,9 @@ Public Class EXO_GLOBALES
 
                 'Pestaña Personas de contacto
 #Region "Personas de contacto"
+                'Eliminamos direcciones
+                sSQL = "DELETE FROM """ & oObjGlobal.compañia.CompanyDB & """.""OCPR"" Where ""CardCode""='" & sCardCode & "' "
+                oObjGlobal.refDi.SQL.executeNonQuery(sSQL)
                 For i = 0 To oOCRD.ContactEmployees.Count - 1
                     oOCRD.ContactEmployees.SetCurrentLine(0)
                     oOCRD.ContactEmployees.Delete()
