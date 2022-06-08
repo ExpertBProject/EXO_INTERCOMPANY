@@ -989,7 +989,7 @@ Public Class EXO_GLOBALES
 #End Region
         End Try
     End Function
-    Public Shared Function Comprueba_Proveedor_en_Master(ByRef oObjGlobal As EXO_UIAPI.EXO_UIAPI, ByVal sLicTradNum As String, ByVal sCardType As String) As Boolean
+    Public Shared Function Comprueba_Proveedor_en_Master(ByRef oObjGlobal As EXO_UIAPI.EXO_UIAPI, ByVal sLicTradNum As String, ByVal sCardType As String, ByVal sSerie As String) As Boolean
         Comprueba_Proveedor_en_Master = False
 #Region "Variables"
         Dim oRs As SAPbobsCOM.Recordset = Nothing
@@ -999,29 +999,34 @@ Public Class EXO_GLOBALES
         Dim oCompanyMaster As SAPbobsCOM.Company = Nothing
 #End Region
         Try
-            OdtEmpresas = New System.Data.DataTable
-            OdtEmpresas.Clear()
-            sSQL = "SELECT * FROM ""@EXO_IPANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_TIPO""='M' "
-            OdtEmpresas = oObjGlobal.refDi.SQL.sqlComoDataTable(sSQL)
-            If OdtEmpresas.Rows.Count > 0 Then
-                For Each dr As DataRow In OdtEmpresas.Rows
-                    sBBDD = dr.Item("U_EXO_BBDD").ToString : sUser = dr.Item("U_EXO_USER").ToString : sPass = dr.Item("U_EXO_PASS").ToString
-                    EXO_CONEXIONES.Connect_Company(oCompanyMaster, oObjGlobal, sUser, sPass, sBBDD)
-                    If sBBDD <> oObjGlobal.compañia.CompanyDB.ToString Then
-                        sSQL = "SELECT ""CardCode"" FROM """ & sBBDD & """.""OCRD"" WHERE ""LicTradNum""='" & sLicTradNum & "' and ""CardType""='" & sCardType & "' "
-                        oRs = CType(oCompanyMaster.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset), SAPbobsCOM.Recordset)
-                        oRs.DoQuery(sSQL)
-                        If oRs.RecordCount > 0 Then
-                            Comprueba_Proveedor_en_Master = True
+            If ((sCardType = "S") Or (sCardType = "C" And sSerie = "CI")) Then
+                OdtEmpresas = New System.Data.DataTable
+                OdtEmpresas.Clear()
+                sSQL = "SELECT * FROM ""@EXO_IPANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_TIPO""='M' "
+                OdtEmpresas = oObjGlobal.refDi.SQL.sqlComoDataTable(sSQL)
+                If OdtEmpresas.Rows.Count > 0 Then
+                    For Each dr As DataRow In OdtEmpresas.Rows
+                        sBBDD = dr.Item("U_EXO_BBDD").ToString : sUser = dr.Item("U_EXO_USER").ToString : sPass = dr.Item("U_EXO_PASS").ToString
+                        EXO_CONEXIONES.Connect_Company(oCompanyMaster, oObjGlobal, sUser, sPass, sBBDD)
+                        If sBBDD <> oObjGlobal.compañia.CompanyDB.ToString Then
+                            sSQL = "SELECT ""CardCode"" FROM """ & sBBDD & """.""OCRD"" WHERE ""LicTradNum""='" & sLicTradNum & "' and ""CardType""='" & sCardType & "' "
+                            oRs = CType(oCompanyMaster.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset), SAPbobsCOM.Recordset)
+                            oRs.DoQuery(sSQL)
+                            If oRs.RecordCount > 0 Then
+                                Comprueba_Proveedor_en_Master = True
+                            Else
+                                oObjGlobal.SBOApp.StatusBar.SetText("Proveedor no creado en la empresa Consolidación. Por favor, dadlo de alta en la empresa Consolidación. ", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                                Comprueba_Proveedor_en_Master = False
+                            End If
                         Else
-                            oObjGlobal.SBOApp.StatusBar.SetText("Proveedor no creado en la empresa Consolidación. Por favor, dadlo de alta en la empresa Consolidación. ", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
-                            Comprueba_Proveedor_en_Master = False
+                            Comprueba_Proveedor_en_Master = True
                         End If
-                    Else
-                        Comprueba_Proveedor_en_Master = True
-                    End If
-                Next
+                    Next
+                End If
+            Else
+                Comprueba_Proveedor_en_Master = True
             End If
+
 
         Catch ex As Exception
             Throw ex

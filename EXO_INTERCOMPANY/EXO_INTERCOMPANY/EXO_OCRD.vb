@@ -239,7 +239,7 @@ Public Class EXO_OCRD
     Public Overrides Function SBOApp_FormDataEvent(ByVal infoEvento As BusinessObjectInfo) As Boolean
         Dim oForm As SAPbouiCOM.Form = Nothing
         Dim bEstado As String = ""
-        Dim sLicTradNum As String = "" : Dim sCardType As String = ""
+        Dim sLicTradNum As String = "" : Dim sCardType As String = "" : Dim sSerie As String = ""
         Try
             oForm = objGlobal.SBOApp.Forms.Item(infoEvento.FormUID)
             If infoEvento.BeforeAction = True Then
@@ -252,13 +252,14 @@ Public Class EXO_OCRD
                             Case SAPbouiCOM.BoEventTypes.et_FORM_DATA_UPDATE
                                 sLicTradNum = oForm.DataSources.DBDataSources.Item("OCRD").GetValue("LicTradNum", 0).ToString.Trim
                                 sCardType = oForm.DataSources.DBDataSources.Item("OCRD").GetValue("CardType", 0).ToString.Trim
-                                If EXO_GLOBALES.Comprueba_Proveedor_en_Master(objGlobal, sLicTradNum, sCardType) = False Then
+                                sSerie = CType(oForm.Items.Item("1320002080").Specific, SAPbouiCOM.ComboBox).Selected.Description
+                                If EXO_GLOBALES.Comprueba_Proveedor_en_Master(objGlobal, sLicTradNum, sCardType, sSerie) = False Then
                                     Return False
                                 End If
                             Case SAPbouiCOM.BoEventTypes.et_FORM_DATA_ADD
                                 sLicTradNum = oForm.DataSources.DBDataSources.Item("OCRD").GetValue("LicTradNum", 0).ToString.Trim
                                 sCardType = oForm.DataSources.DBDataSources.Item("OCRD").GetValue("CardType", 0).ToString.Trim
-                                If EXO_GLOBALES.Comprueba_Proveedor_en_Master(objGlobal, sLicTradNum, sCardType) = False Then
+                                If EXO_GLOBALES.Comprueba_Proveedor_en_Master(objGlobal, sLicTradNum, sCardType, sSerie) = False Then
                                     Return False
                                 End If
                             Case SAPbouiCOM.BoEventTypes.et_FORM_DATA_DELETE
