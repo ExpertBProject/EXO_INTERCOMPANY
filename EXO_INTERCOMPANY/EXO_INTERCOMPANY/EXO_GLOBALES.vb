@@ -456,7 +456,7 @@ Public Class EXO_GLOBALES
                 sSQL = "DELETE FROM """ & oCompanyDes.CompanyDB & """.""OCPR"" Where ""CardCode""='" & sCardCode & "' "
                 oObjGlobal.refDi.SQL.executeNonQuery(sSQL)
                 For i = 0 To oOCRD_Destino.ContactEmployees.Count - 1
-                    oOCRD_Destino.ContactEmployees.SetCurrentLine(0)
+                    oOCRD_Destino.ContactEmployees.SetCurrentLine(i)
                     oOCRD_Destino.ContactEmployees.Delete()
                 Next
                 iContactos = oOCRD.ContactEmployees.Count
@@ -683,6 +683,7 @@ Public Class EXO_GLOBALES
                                         Exit Function
                                     End If
                                 End If
+                                oObjGlobal.SBOApp.StatusBar.SetText("Actualizado Condición de pago " & sGroupNum & " para el IC " & sLicTradNum & " - " & oOCRD.CardName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
                             End If
                         Else
                             If oOCTG.Add() <> 0 Then
@@ -702,6 +703,7 @@ Public Class EXO_GLOBALES
                                     oObjGlobal.SBOApp.StatusBar.SetText("Error Días de pago para el IC " & sLicTradNum & " - " & oOCRD.CardName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                                     Exit Function
                                 End If
+                                oObjGlobal.SBOApp.StatusBar.SetText("Creado Condición de pago " & sGroupNum & " para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - ", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
                             End If
                         End If
                         oOCRD_Destino.PayTermsGrpCode = CType(sGroupNum, Integer)
@@ -1347,7 +1349,7 @@ Public Class EXO_GLOBALES
                 sSQL = "DELETE FROM """ & oObjGlobal.compañia.CompanyDB & """.""CRD1"" Where ""CardCode""='" & sCardCode & "' "
                 oObjGlobal.refDi.SQL.executeNonQuery(sSQL)
                 For i = 0 To oOCRD.Addresses.Count - 1
-                    oOCRD.Addresses.SetCurrentLine(0)
+                    oOCRD.Addresses.SetCurrentLine(i)
                     oOCRD.Addresses.Delete()
                 Next
 
@@ -1533,6 +1535,7 @@ Public Class EXO_GLOBALES
                                         Exit Function
                                     End If
                                 End If
+                                oObjGlobal.SBOApp.StatusBar.SetText("Actualizado Condición de pago " & sGroupNum & " para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - ", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
                             End If
                         Else
                             If oOCTG.Add() <> 0 Then
@@ -1552,6 +1555,7 @@ Public Class EXO_GLOBALES
                                     oObjGlobal.SBOApp.StatusBar.SetText("Error Días de pago para el IC " & sLicTradNum & " - " & oOCRD.CardName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                                     Exit Function
                                 End If
+                                oObjGlobal.SBOApp.StatusBar.SetText("Creado Condición de pago " & sGroupNum & " para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - ", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
                             End If
                         End If
                         oOCRD.PayTermsGrpCode = CType(sGroupNum, Integer)
