@@ -104,7 +104,7 @@ Public Class EXO_OWTM
                 If sBBDD = sBBDDDMaster Then
                     OdtEmpresas = New System.Data.DataTable
                     OdtEmpresas.Clear()
-                    sSQL = "SELECT * FROM ""@EXO_IPANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_TIPO""='D' "
+                    sSQL = "SELECT * FROM ""@EXO_IPANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_TIPO""='D' ORDER BY ""LineId"" "
                     OdtEmpresas = objGlobal.refDi.SQL.sqlComoDataTable(sSQL)
                     If OdtEmpresas.Rows.Count > 0 Then
                         oCmpSrv = objGlobal.compañia.GetCompanyService()
@@ -120,17 +120,18 @@ Public Class EXO_OWTM
                                 Try
                                     sBBDD = dr.Item("U_EXO_BBDD").ToString : sUser = dr.Item("U_EXO_USER").ToString : sPass = dr.Item("U_EXO_PASS").ToString
                                     If sBBDD = "SEMA_PROD" Or sBBDD = "RANTI" Or sBBDD = "SIYCF" Then
-                                        objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". No se puede sincronizar Modelo de autorización: " & sModelo & " - " & sModeloName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                                        objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & sBBDD & ". No se puede sincronizar Modelo de autorización: " & sModelo & " - " & sModeloName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
                                     Else
                                         EXO_CONEXIONES.Connect_Company(oCompanyDes, objGlobal, sUser, sPass, sBBDD)
                                         objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". Sincronizando Modelo de autorización: " & sModelo & " - " & sModeloName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
                                         EXO_GLOBALES.Sincroniza_Modelo_Autorización_Master(oApprovalTemplate, oCompanyDes, objGlobal)
+                                        objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". Fin Sincronización.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                                        EXO_CONEXIONES.Disconnect_Company(oCompanyDes)
                                     End If
                                 Catch ex As Exception
                                     objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". Error: " & ex.Message, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                                 Finally
-                                    objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". Fin Sincronización.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
-                                    EXO_CONEXIONES.Disconnect_Company(oCompanyDes)
+
                                 End Try
                             Next
                         Else
