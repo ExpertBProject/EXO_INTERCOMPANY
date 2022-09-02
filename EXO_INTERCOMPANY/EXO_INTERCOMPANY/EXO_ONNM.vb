@@ -115,12 +115,13 @@ Public Class EXO_ONNM
             oForm = objGlobal.SBOApp.Forms.Item(pVal.FormUID)
             If pVal.ItemUID = "1" Then
                 sBBDD = objGlobal.refDi.compañia.CompanyDB
-                sSQL = "SELECT TOP 1 ""U_EXO_BBDD"" FROM ""@EXO_IPANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_TIPO""='M' "
+                sSQL = "SELECT TOP 1 ""U_EXO_BBDD"" FROM ""@EXO_IPANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_TIPO""='M' ORDER BY ""LineId""  "
                 sBBDDDMaster = objGlobal.refDi.SQL.sqlStringB1(sSQL)
+
                 If sBBDD = sBBDDDMaster Then
                     OdtEmpresas = New System.Data.DataTable
                     OdtEmpresas.Clear()
-                    sSQL = "SELECT * FROM ""@EXO_IPANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_TIPO""='D' "
+                    sSQL = "SELECT * FROM ""@EXO_IPANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_TIPO""='D' ORDER BY ""LineId"" "
                     OdtEmpresas = objGlobal.refDi.SQL.sqlComoDataTable(sSQL)
                     If OdtEmpresas.Rows.Count > 0 Then
                         objGlobal.SBOApp.StatusBar.SetText("Se va a proceder a recorrer las SOCIEDADES...", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)

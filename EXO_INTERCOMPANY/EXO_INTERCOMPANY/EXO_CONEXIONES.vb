@@ -16,7 +16,7 @@
             oCompanyDes.DbServerType = SAPbobsCOM.BoDataServerTypes.dst_HANADB
             ' oCompany.SLDServer = oCompOrigen.SLDServer
             oCompanyDes.CompanyDB = sBBDD
-            'oLog.escribeMensaje("database:" & oCompany.CompanyDB, EXO_Log.EXO_Log.Tipo.advertencia)
+
             If oCompanyDes.Connect <> 0 Then
                 Throw New System.Exception("Error en la conexión a la compañia:" & oCompanyDes.GetLastErrorDescription.Trim)
             End If

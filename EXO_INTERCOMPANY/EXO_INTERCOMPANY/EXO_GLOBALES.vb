@@ -2983,6 +2983,8 @@ Public Class EXO_GLOBALES
         Dim oApprovalTemplateDes As SAPbobsCOM.ApprovalTemplate = Nothing
         Dim oApprovalTemplateParamsDes As SAPbobsCOM.ApprovalTemplateParams = Nothing
         Dim oApprovalTemplateTermDes As SAPbobsCOM.ApprovalTemplateTerm = Nothing
+
+        Dim OdtDpto As System.Data.DataTable = Nothing
 #End Region
         Sincroniza_Modelo_Autorización_Master = False
         Try
@@ -3078,6 +3080,29 @@ Public Class EXO_GLOBALES
                 ' Si no existe la creamos
                 sSQL = "SELECT ""IntrnalKey"" FROM """ & oCompanyDes.CompanyDB & """.""OUQR"" Where ""QName""='" & sQueryNameOrigen & "' "
                 Dim sQueriIDDestino As String = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+
+#Region "Crear Todos los registros en Tabla EXO_DPTO"
+                OdtDpto = New System.Data.DataTable
+                OdtDpto.Clear()
+                sSQL = "SELECT ""DPTOO"".* FROM """ & oObjGlobal.compañia.CompanyDB & """.""@EXO_DPTO""  ""DPTOO"" "
+                sSQL &= " LEFT JOIN """ & oCompanyDes.CompanyDB & """.""@EXO_DPTO"" ""DPTOD"" ON ""DPTOO"".""Code""=""DPTOD"".""Code"" "
+                sSQL &= " WHERE IFNULL(""DPTOD"".""Code"",'')='' "
+                OdtDpto = oObjGlobal.refDi.SQL.sqlComoDataTable(sSQL)
+
+                If OdtDpto.Rows.Count > 0 Then
+                    For Each dr As DataRow In OdtDpto.Rows
+                        sSQL = "INSERT INTO """ & oCompanyDes.CompanyDB & """.""@EXO_DPTO"" (""Code"", ""Name"") VALUES ('" & dr.Item("Code").ToString & " ', '" & dr.Item("Name").ToString & "')"
+                        Dim bRes As Boolean = oObjGlobal.refDi.SQL.executeNonQuery(sSQL)
+                        If bRes = True Then
+                            oObjGlobal.SBOApp.StatusBar.SetText("Insertado Dpto: " & dr.Item("Code").ToString & " - " & dr.Item("Name").ToString, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
+                        Else
+                            oObjGlobal.SBOApp.StatusBar.SetText("No se ha podido insertar Dpto: " & dr.Item("Code").ToString & " - " & dr.Item("Name").ToString, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                        End If
+                    Next
+                Else
+                    oObjGlobal.SBOApp.StatusBar.SetText("No existen Dptos. para traspasar en el Intercompany", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                End If
+#End Region
                 'If sQueriIDDestino = "" Then
                 If EXO_GLOBALES.CrearQuery_Master(sQueriIDDestino, iQueriIDOrigen, sQueryCategoryOrigen, sQueryCategoryNameOrigen, oCompanyDes, oObjGlobal) = False Then
                     oObjGlobal.SBOApp.StatusBar.SetText("No se ha podido crear la Query Asignada: " & sQueryNameOrigen, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
@@ -3102,6 +3127,7 @@ Public Class EXO_GLOBALES
             EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oApprovalTemplateParamsDes, Object))
             EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oApprovalTemplateDes, Object))
             EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oCmpSrvDes, Object))
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(OdtDpto, Object))
 #End Region
         End Try
     End Function
