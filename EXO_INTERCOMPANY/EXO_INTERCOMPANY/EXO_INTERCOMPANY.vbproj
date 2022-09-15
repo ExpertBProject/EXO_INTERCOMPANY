@@ -179,7 +179,9 @@
     <EmbeddedResource Include="XML_BD\UDO_EXO_IPANEL.xml" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="XML_FILTROS\XML_FILTROS_INTERCOMPANY.xml" />
+    <EmbeddedResource Include="XML_FILTROS\XML_FILTROS_INTERCOMPANY.xml">
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="XML_MENU\EXO_MENU.xml">

@@ -2990,6 +2990,7 @@ Public Class EXO_GLOBALES
         Try
             sSQL = "SELECT ""WtmCode"" FROM """ & oCompanyDes.CompanyDB & """.""OWTM"" where ""Name""='" & oApprovalTemplate.Name.ToString & "' "
             sExiste = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+            oObjGlobal.SBOApp.StatusBar.SetText(sExiste & " - " & sSQL, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
             oCmpSrvDes = oCompanyDes.GetCompanyService()
             oApprovalTemplateServiceDes = CType(oCmpSrvDes.GetBusinessService(SAPbobsCOM.ServiceTypes.ApprovalTemplatesService), SAPbobsCOM.ApprovalTemplatesService)
             oApprovalTemplateDes = CType(oApprovalTemplateServiceDes.GetDataInterface(SAPbobsCOM.ApprovalTemplatesServiceDataInterfaces.atsdiApprovalTemplate), SAPbobsCOM.ApprovalTemplate)
@@ -3001,9 +3002,9 @@ Public Class EXO_GLOBALES
                 oObjGlobal.SBOApp.StatusBar.SetText("Actualizando Modelo...", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
                 'Remove an existing Approval Stage
                 Call oApprovalTemplateServiceDes.RemoveApprovalTemplate(oApprovalTemplateParamsDes)
-
+                oObjGlobal.SBOApp.StatusBar.SetText("Se ha borrado", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
             End If
-
+            oObjGlobal.SBOApp.StatusBar.SetText("Creando Modelo...", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
             oApprovalTemplateDes.Name = oApprovalTemplate.Name
             oApprovalTemplateDes.Remarks = oApprovalTemplate.Remarks
             Select Case oApprovalTemplateDes.IsActive
@@ -3015,7 +3016,7 @@ Public Class EXO_GLOBALES
                 Case SAPbobsCOM.BoYesNoEnum.tNO : oApprovalTemplateDes.IsActiveWhenUpdatingDocuments = SAPbobsCOM.BoYesNoEnum.tNO
                 Case SAPbobsCOM.BoYesNoEnum.tYES : oApprovalTemplateDes.IsActiveWhenUpdatingDocuments = SAPbobsCOM.BoYesNoEnum.tYES
             End Select
-
+            oObjGlobal.SBOApp.StatusBar.SetText("Autor", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
 #Region "Pestaña Autor"
             For i = 0 To oApprovalTemplate.ApprovalTemplateUsers.Count - 1
                 'Los usuarios tenemos que buscarlos para saber el nombre
@@ -3029,17 +3030,19 @@ Public Class EXO_GLOBALES
                 sSQL = "SELECT ""USERID"" FROM """ & oCompanyDes.CompanyDB & """.""OUSR""  WHERE ""USER_CODE""='" & sUsuarioNameOrigen.ToString & "' "
                 iUsuarioDes = CType(oObjGlobal.refDi.SQL.sqlNumericaB1(sSQL), Integer)
                 If iUsuarioDes = 0 Then
-                    oObjGlobal.SBOApp.StatusBar.SetText("No existe el usuario " & sUsuarioNameOrigen.ToString & ". Por favor, revise los datos.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                    oObjGlobal.SBOApp.StatusBar.SetText("No existe el usuario " & sUsuarioNameOrigen.ToString & ". Por favor, revise los datos.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                     Exit Function
                 End If
                 oApprovalTemplateDes.ApprovalTemplateUsers.Add.UserID = iUsuarioDes
             Next
 #End Region
+            oObjGlobal.SBOApp.StatusBar.SetText("Documentos", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
 #Region "Pestaña Documentos"
             For i = 0 To oApprovalTemplate.ApprovalTemplateDocuments.Count - 1
                 oApprovalTemplateDes.ApprovalTemplateDocuments.Add.DocumentType = oApprovalTemplate.ApprovalTemplateDocuments.Item(i).DocumentType
             Next
 #End Region
+            oObjGlobal.SBOApp.StatusBar.SetText("Etapas", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
 #Region "Pestaña Etapas - Son los modelos"
             For i = 0 To oApprovalTemplate.ApprovalTemplateStages.Count - 1
                 Dim iModeloAprobacionOrigen As Integer = 0 : Dim sModeloAprobaciónNameOrigen As String = "" : Dim iMOdeloAprobacionDes As Integer = 0
@@ -3052,12 +3055,13 @@ Public Class EXO_GLOBALES
                 sSQL = "SELECT ""WstCode"" FROM """ & oCompanyDes.CompanyDB & """.""OWST""  WHERE ""Name""='" & sModeloAprobaciónNameOrigen.ToString & "' "
                 iMOdeloAprobacionDes = CType(oObjGlobal.refDi.SQL.sqlNumericaB1(sSQL), Integer)
                 If iMOdeloAprobacionDes = 0 Then
-                    oObjGlobal.SBOApp.StatusBar.SetText("No existe la etapa" & sModeloAprobaciónNameOrigen.ToString & ". Por favor, revise los datos.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                    oObjGlobal.SBOApp.StatusBar.SetText("No existe la etapa" & sModeloAprobaciónNameOrigen.ToString & ". Por favor, revise los datos.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                     Exit Function
                 End If
                 oApprovalTemplateDes.ApprovalTemplateStages.Add.ApprovalStageCode = iMOdeloAprobacionDes
             Next
 #End Region
+            oObjGlobal.SBOApp.StatusBar.SetText("Condiciones", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
 #Region "Pestaña Condiciones"
             oApprovalTemplateDes.UseTerms = oApprovalTemplate.UseTerms
             For i = 0 To oApprovalTemplate.ApprovalTemplateTerms.Count - 1
@@ -3108,16 +3112,22 @@ Public Class EXO_GLOBALES
                     oObjGlobal.SBOApp.StatusBar.SetText("No se ha podido crear la Query Asignada: " & sQueryNameOrigen, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                     Return False
                 End If
+                sSQL = "SELECT ""IntrnalKey"" FROM """ & oCompanyDes.CompanyDB & """.""OUQR"" Where ""QName""='" & sQueryNameOrigen & "' "
+                sQueriIDDestino = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+
                 'End If
                 'Asignamos query
                 If sQueriIDDestino.Trim <> "" Then
-                    Dim iEncuentra As Integer = InStr(sQueriIDDestino, vbTab)
-                    Dim sIDDestino As String = Left(sQueriIDDestino, iEncuentra).Trim
-                    oApprovalTemplateDes.ApprovalTemplateQueries.Add.QueryID = CType(sIDDestino, Integer)
+                    'Dim iEncuentra As Integer = InStr(sQueriIDDestino, vbTab)
+                    'Dim sIDDestino As String = Left(sQueriIDDestino, iEncuentra).Trim
+                    oObjGlobal.SBOApp.StatusBar.SetText(sQueriIDDestino, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
+                    'oApprovalTemplateDes.ApprovalTemplateQueries.Add.QueryID = CType(sIDDestino.Trim, Integer)
+                    oApprovalTemplateDes.ApprovalTemplateQueries.Add.QueryID = CType(sQueriIDDestino.Trim, Integer)
                 End If
 
             Next
 #End Region
+
             oApprovalTemplateParamsDes = oApprovalTemplateServiceDes.AddApprovalTemplate(oApprovalTemplateDes)
             Sincroniza_Modelo_Autorización_Master = True
         Catch ex As Exception
@@ -3211,7 +3221,7 @@ Public Class EXO_GLOBALES
                         oObjGlobal.SBOApp.StatusBar.SetText("(EXO) - " & sError, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                         Exit Function
                     Else
-                        oCompanyDes.GetNewObjectCode(sQueriIDDestino)
+                        sQueriIDDestino = oCompanyDes.GetNewObjectKey()
                     End If
                 Else
                     If oUQDes.GetByKey(CType(sIDQueryDes, Integer), CType(sIDCatDes, Integer)) = True Then
@@ -3227,7 +3237,7 @@ Public Class EXO_GLOBALES
                             oObjGlobal.SBOApp.StatusBar.SetText("(EXO) - " & sError, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                             Exit Function
                         Else
-                            oCompanyDes.GetNewObjectCode(sQueriIDDestino)
+                            sQueriIDDestino = oCompanyDes.GetNewObjectKey()
                         End If
                     Else
                         oObjGlobal.SBOApp.StatusBar.SetText("Error inesperado. No se encuentra la la query: " & oUQOrigen.QueryDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
