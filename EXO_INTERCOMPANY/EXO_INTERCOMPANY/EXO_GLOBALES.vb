@@ -835,7 +835,7 @@ Public Class EXO_GLOBALES
                                 oOPYM.PaymentMethodCode = sViaPago
                             End If
                             oOPYM.Description = oRsOPYM.Fields.Item("Descript").Value.ToString
-                            Select Case oRsOPYM.Fields.Item("Descript").Value.ToString
+                            Select Case oRsOPYM.Fields.Item("Active").Value.ToString
                                 Case "Y" : oOPYM.Active = SAPbobsCOM.BoYesNoEnum.tYES
                                 Case Else : oOPYM.Active = SAPbobsCOM.BoYesNoEnum.tNO
                             End Select
