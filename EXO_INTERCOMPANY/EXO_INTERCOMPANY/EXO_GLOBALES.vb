@@ -2983,7 +2983,9 @@ Public Class EXO_GLOBALES
         Dim oApprovalTemplateDes As SAPbobsCOM.ApprovalTemplate = Nothing
         Dim oApprovalTemplateParamsDes As SAPbobsCOM.ApprovalTemplateParams = Nothing
         Dim oApprovalTemplateTermDes As SAPbobsCOM.ApprovalTemplateTerm = Nothing
-
+        Dim ApprovalTemplateQueriesDes As SAPbobsCOM.ApprovalTemplateQueries = Nothing
+        Dim ApprovalTemplateQueryDes As SAPbobsCOM.ApprovalTemplateQuery = Nothing
+        Dim ApprovalTemplateStageDes As SAPbobsCOM.ApprovalTemplateStage = Nothing
         Dim OdtDpto As System.Data.DataTable = Nothing
 #End Region
         Sincroniza_Modelo_Autorización_Master = False
@@ -3055,15 +3057,21 @@ Public Class EXO_GLOBALES
                 sSQL = "SELECT ""WstCode"" FROM """ & oCompanyDes.CompanyDB & """.""OWST""  WHERE ""Name""='" & sModeloAprobaciónNameOrigen.ToString & "' "
                 iMOdeloAprobacionDes = CType(oObjGlobal.refDi.SQL.sqlNumericaB1(sSQL), Integer)
                 If iMOdeloAprobacionDes = 0 Then
-                    oObjGlobal.SBOApp.StatusBar.SetText("No existe la etapa" & sModeloAprobaciónNameOrigen.ToString & ". Por favor, revise los datos.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                    oObjGlobal.SBOApp.StatusBar.SetText("No existe la etapa " & sModeloAprobaciónNameOrigen.ToString & ". Por favor, revise los datos.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                     Exit Function
                 End If
-                oApprovalTemplateDes.ApprovalTemplateStages.Add.ApprovalStageCode = iMOdeloAprobacionDes
+                ApprovalTemplateStageDes = oApprovalTemplateDes.ApprovalTemplateStages.Add
+                ApprovalTemplateStageDes.ApprovalStageCode = iMOdeloAprobacionDes
+                ApprovalTemplateStageDes.Remarks = oApprovalTemplate.ApprovalTemplateStages.Item(i).Remarks
+                ApprovalTemplateStageDes.SortID = oApprovalTemplate.ApprovalTemplateStages.Item(i).SortID
+                'oApprovalTemplateDes.ApprovalTemplateStages.Add.ApprovalStageCode = iMOdeloAprobacionDes
+                ' oApprovalTemplateDes.ApprovalTemplateStages.Add.Remarks = oApprovalTemplate.ApprovalTemplateStages.Item(i).Remarks
             Next
 #End Region
             oObjGlobal.SBOApp.StatusBar.SetText("Condiciones", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
 #Region "Pestaña Condiciones"
             oApprovalTemplateDes.UseTerms = oApprovalTemplate.UseTerms
+
             For i = 0 To oApprovalTemplate.ApprovalTemplateTerms.Count - 1
                 oApprovalTemplateTermDes = oApprovalTemplateDes.ApprovalTemplateTerms.Add
                 oApprovalTemplateTermDes.ConditionType = oApprovalTemplate.ApprovalTemplateTerms.Item(i).ConditionType
@@ -3107,24 +3115,25 @@ Public Class EXO_GLOBALES
                     oObjGlobal.SBOApp.StatusBar.SetText("No existen Dptos. para traspasar en el Intercompany", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
                 End If
 #End Region
-                'If sQueriIDDestino = "" Then
-                If EXO_GLOBALES.CrearQuery_Master(sQueriIDDestino, iQueriIDOrigen, sQueryCategoryOrigen, sQueryCategoryNameOrigen, oCompanyDes, oObjGlobal) = False Then
-                    oObjGlobal.SBOApp.StatusBar.SetText("No se ha podido crear la Query Asignada: " & sQueryNameOrigen, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                    Return False
-                End If
-                sSQL = "SELECT ""IntrnalKey"" FROM """ & oCompanyDes.CompanyDB & """.""OUQR"" Where ""QName""='" & sQueryNameOrigen & "' "
-                sQueriIDDestino = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                If sQueriIDDestino = "" Then
+                    If EXO_GLOBALES.CrearQuery_Master(sQueriIDDestino, iQueriIDOrigen, sQueryCategoryOrigen, sQueryCategoryNameOrigen, oCompanyDes, oObjGlobal) = False Then
+                        oObjGlobal.SBOApp.StatusBar.SetText("No se ha podido crear la Query Asignada: " & sQueryNameOrigen, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                        Return False
+                    End If
+                    sSQL = "SELECT ""IntrnalKey"" FROM """ & oCompanyDes.CompanyDB & """.""OUQR"" Where ""QName""='" & sQueryNameOrigen & "' "
+                    sQueriIDDestino = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
 
-                'End If
+                End If
                 'Asignamos query
                 If sQueriIDDestino.Trim <> "" Then
                     'Dim iEncuentra As Integer = InStr(sQueriIDDestino, vbTab)
                     'Dim sIDDestino As String = Left(sQueriIDDestino, iEncuentra).Trim
                     oObjGlobal.SBOApp.StatusBar.SetText(sQueriIDDestino, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
                     'oApprovalTemplateDes.ApprovalTemplateQueries.Add.QueryID = CType(sIDDestino.Trim, Integer)
-                    oApprovalTemplateDes.ApprovalTemplateQueries.Add.QueryID = CType(sQueriIDDestino.Trim, Integer)
+                    ApprovalTemplateQueryDes = oApprovalTemplateDes.ApprovalTemplateQueries.Add
+                    ApprovalTemplateQueryDes.QueryID = CType(sQueriIDDestino.Trim, Integer)
+                    ' oApprovalTemplateDes.ApprovalTemplateQueries.Add.QueryID = CType(sQueriIDDestino.Trim, Integer)
                 End If
-
             Next
 #End Region
 
@@ -3209,7 +3218,7 @@ Public Class EXO_GLOBALES
                 sSQL = "SELECT ""IntrnalKey"" FROM """ & oCompanyDes.CompanyDB & """.""OUQR"" Where ""QCategory""='" & sIDCatDes & "' and ""QName""='" & oUQOrigen.QueryDescription & "' "
                 sIDQueryDes = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
                 If sIDQueryDes.Trim = "" Then
-                    oObjGlobal.SBOApp.StatusBar.SetText("Se procede a crear la query la query: " & iQueriIDOrigen, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                    oObjGlobal.SBOApp.StatusBar.SetText("Se procede a crear la query: " & iQueriIDOrigen, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
                     oUQDes.ProcedureAlias = oUQOrigen.ProcedureAlias
                     oUQDes.ProcedureName = oUQOrigen.ProcedureName
                     oUQDes.Query = oUQOrigen.Query
@@ -3225,7 +3234,7 @@ Public Class EXO_GLOBALES
                     End If
                 Else
                     If oUQDes.GetByKey(CType(sIDQueryDes, Integer), CType(sIDCatDes, Integer)) = True Then
-                        oObjGlobal.SBOApp.StatusBar.SetText("Se procede a actualizar la query la query: " & iQueriIDOrigen, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                        oObjGlobal.SBOApp.StatusBar.SetText("Se procede a actualizar la query: " & iQueriIDOrigen, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
                         oUQDes.ProcedureAlias = oUQOrigen.ProcedureAlias
                         oUQDes.ProcedureName = oUQOrigen.ProcedureName
                         oUQDes.Query = oUQOrigen.Query
