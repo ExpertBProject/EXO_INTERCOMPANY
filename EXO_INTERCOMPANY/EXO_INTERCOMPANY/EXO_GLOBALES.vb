@@ -2815,6 +2815,11 @@ Public Class EXO_GLOBALES
             oUser_Destino.Superuser = oUser.Superuser
             If bExiste = False Then
                 oUser_Destino.UserPassword = "Osma@2015"
+            Else
+                For i = 0 To oUser_Destino.UserGroupByUser.Count - 1
+                    oUser_Destino.UserGroupByUser.SetCurrentLine(i)
+                    oUser_Destino.UserGroupByUser.Delete()
+                Next
             End If
             'If oUser.Superuser = SAPbobsCOM.BoYesNoEnum.tNO Then
             '    For i = 0 To oUser.UserPermission.Count - 1
@@ -2825,10 +2830,7 @@ Public Class EXO_GLOBALES
             '    Next
             'End If
 
-            For i = 0 To oUser_Destino.UserGroupByUser.Count - 1
-                oUser_Destino.UserGroupByUser.SetCurrentLine(0)
-                oUser_Destino.UserGroupByUser.Delete()
-            Next
+
             'For i = 0 To oUser.UserGroupByUser.Count - 1
             '    oUser.UserGroupByUser.SetCurrentLine(i)
             '    oUser_Destino.UserGroupByUser.Add()
@@ -2893,6 +2895,17 @@ Public Class EXO_GLOBALES
                     Exit Function
                 End If
 
+                'Actualizamos Password
+                sSQL = "UPDATE D SET D.""PASSWORD""=O.""PASSWORD"",
+                                     D.""STData""=O.""STData"",
+                                     D.""dType""=O.""dType""
+                        FROM """ & oCompanyDes.CompanyDB & """.""OUSR"" D
+                        INNER JOIN """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" O ON O.""USER_CODE""=D.""USER_CODE""
+                        WHERE D.""USERID"" = " & sUsuarioDes & "; "
+                If oObjGlobal.refDi.SQL.executeNonQuery(sSQL) <> True Then
+                    oObjGlobal.SBOApp.StatusBar.SetText("Error al actualizar Password del usuario " & oUser.UserCode & " - " & oUser.UserName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                    Exit Function
+                End If
             End If
             Sincroniza_User_Master = True
         Catch ex As Exception
