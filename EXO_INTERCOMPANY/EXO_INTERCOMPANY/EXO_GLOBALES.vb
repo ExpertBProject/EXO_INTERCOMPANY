@@ -2822,12 +2822,17 @@ Public Class EXO_GLOBALES
                 Next
             End If
             'If oUser.Superuser = SAPbobsCOM.BoYesNoEnum.tNO Then
-            '    For i = 0 To oUser.UserPermission.Count - 1
-            '        oUser.UserPermission.SetCurrentLine(0)
-            '        oUser_Destino.UserPermission.Add()
-            '        oUser_Destino.UserPermission.PermissionID = oUser.UserPermission.PermissionID
-            '        oUser_Destino.UserPermission.Permission = oUser.UserPermission.Permission
-            '    Next
+            For i = 0 To oUser.UserPermission.Count - 1
+                Try
+                    oUser.UserPermission.SetCurrentLine(0)
+                    oUser_Destino.UserPermission.Add()
+                    oUser_Destino.UserPermission.PermissionID = oUser.UserPermission.PermissionID
+                    oUser_Destino.UserPermission.Permission = oUser.UserPermission.Permission
+                Catch ex As Exception
+                    oObjGlobal.SBOApp.StatusBar.SetText("Error Asignando permisos - " & oUser.UserCode & " - " & oUser.UserName & " - " &
+                                                               ex.Message, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                End Try
+            Next
             'End If
 
 
