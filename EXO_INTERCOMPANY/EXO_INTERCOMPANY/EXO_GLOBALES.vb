@@ -2816,33 +2816,50 @@ Public Class EXO_GLOBALES
             If bExiste = False Then
                 oUser_Destino.UserPassword = "Osma@2015"
             Else
-                For i = 0 To oUser_Destino.UserGroupByUser.Count - 1
-                    oUser_Destino.UserGroupByUser.SetCurrentLine(i)
-                    oUser_Destino.UserGroupByUser.Delete()
-                Next
+                'For i = 0 To oUser_Destino.UserGroupByUser.Count - 1
+                '    oUser_Destino.UserGroupByUser.SetCurrentLine(i)
+                '    oUser_Destino.UserGroupByUser.Delete()
+                'Next
             End If
+            'For i = 0 To oUser.UserGroupByUser.Count - 1
+            '    'oUser.UserGroupByUser.SetCurrentLine(i)
+            '    'oUser_Destino.UserGroupByUser.Add()
+            '    'oUser_Destino.UserGroupByUser.GroupId = oUser.UserGroupByUser.GroupId
+            '    'oUser_Destino.UserGroupByUser.DueDate = oUser.UserGroupByUser.DueDate
+            '    'oUser_Destino.UserGroupByUser.StartDate = oUser.UserGroupByUser.StartDate
+
+            'Next
             'If oUser.Superuser = SAPbobsCOM.BoYesNoEnum.tNO Then
-            For i = 0 To oUser.UserPermission.Count - 1
-                Try
-                    oUser.UserPermission.SetCurrentLine(0)
-                    oUser_Destino.UserPermission.Add()
-                    oUser_Destino.UserPermission.PermissionID = oUser.UserPermission.PermissionID
-                    oUser_Destino.UserPermission.Permission = oUser.UserPermission.Permission
-                Catch ex As Exception
-                    oObjGlobal.SBOApp.StatusBar.SetText("Error Asignando permisos - " & oUser.UserCode & " - " & oUser.UserName & " - " &
-                                                               ex.Message, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                End Try
-            Next
+            '    For i = 0 To oUser.UserPermission.Count - 1
+            '        Try
+            '            Dim bEncuentra As Boolean = False : Dim iFila As Integer = 0
+            '            oUser.UserPermission.SetCurrentLine(i)
+            '            For d = 0 To oUser_Destino.UserPermission.Count - 1
+            '                oUser_Destino.UserPermission.SetCurrentLine(d)
+            '                If oUser_Destino.UserPermission.PermissionID = oUser.UserPermission.PermissionID Then
+            '                    bEncuentra = True : iFila = d
+            '                    Exit For
+            '                End If
+            '            Next
+            '            If bEncuentra = True Then
+            '                oUser_Destino.UserPermission.SetCurrentLine(iFila)
+            '                oUser_Destino.UserPermission.PermissionID = oUser.UserPermission.PermissionID
+            '                oUser_Destino.UserPermission.Permission = oUser.UserPermission.Permission
+            '            Else
+            '                oUser_Destino.UserPermission.Add()
+            '                oUser_Destino.UserPermission.PermissionID = oUser.UserPermission.PermissionID
+            '                oUser_Destino.UserPermission.Permission = oUser.UserPermission.Permission
+            '            End If
+
+            '        Catch ex As Exception
+            '            oObjGlobal.SBOApp.StatusBar.SetText("Asignando permisos - " & oUser.UserCode & " - " & oUser.UserName & " - " &
+            '                                                       ex.Message, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+            '        End Try
+            '    Next
             'End If
 
 
-            'For i = 0 To oUser.UserGroupByUser.Count - 1
-            '    oUser.UserGroupByUser.SetCurrentLine(i)
-            '    oUser_Destino.UserGroupByUser.Add()
-            '    oUser_Destino.UserGroupByUser.GroupId = oUser.UserGroupByUser.GroupId
-            '    oUser_Destino.UserGroupByUser.DueDate = oUser.UserGroupByUser.DueDate
-            '    oUser_Destino.UserGroupByUser.StartDate = oUser.UserGroupByUser.StartDate
-            'Next
+
 
             If bExiste = True Then
                 If oUser_Destino.Update() <> 0 Then
@@ -2863,33 +2880,65 @@ Public Class EXO_GLOBALES
             End If
 
             If sUsuarioDes <> "" Then
-                'Actualizamos datos del usuario
-
-                sSQL = "INSERT INTO """ & oCompanyDes.CompanyDB & """.""USR7"" "
-                sSQL &= "SELECT " & sUsuarioDes & ", ""GroupId"", ""Category"", ""StartDate"", ""DueDate"" "
-                sSQL &= "FROM """ & oObjGlobal.compañia.CompanyDB & """.""USR7"" t0  "
-                sSQL &= " WHERE t0.""UserId"" = " & sCodUsuarioOrigen & "; "
+                'Actualizamos Grupos de usuario
+                sSQL = "DELETE FROM """ & oCompanyDes.CompanyDB & """.""USR7"" WHERE ""UserId"" =" & sUsuarioDes
                 If oObjGlobal.refDi.SQL.executeNonQuery(sSQL) <> True Then
                     oObjGlobal.SBOApp.StatusBar.SetText("Error al actualizar los grupos del usuario " & oUser.UserCode & " - " & oUser.UserName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                     Exit Function
+                Else
+                    'sSQL = "INSERT INTO """ & oCompanyDes.CompanyDB & """.""OUGR"" "
+                    'sSQL &= " SELECT   OUGR.""GroupId"" , OUGR.""GroupName"" , OUGR.""GroupDec"" , OUGR.""Allowences"" , OUGR.""TPLId"", OUGR.""GroupType"", OUGR.""CockpitId""  "
+                    'sSQL &= " FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUGR"" AS OUGR "
+                    'sSQL &= " LEFT JOIN """ & oCompanyDes.CompanyDB & """.""OUGR"" AS D ON D.""GroupName""=OUGR.""GroupName"" "
+                    'sSQL &= " WHERE IFNULL(D.""GroupName"",0)<>0 "
+                    'oObjGlobal.refDi.SQL.executeNonQuery(sSQL)
+
+                    sSQL = "INSERT INTO """ & oCompanyDes.CompanyDB & """.""USR7"" "
+                    sSQL &= "Select " & sUsuarioDes & ", D.""GroupId"", US.""Category"", US.""StartDate"", US.""DueDate"" "
+                    sSQL &= "FROM """ & oObjGlobal.compañia.CompanyDB & """.""USR7"" US  "
+                    sSQL &= " INNER JOIN """ & oObjGlobal.compañia.CompanyDB & """.""OUGR"" AS OUGR ON OUGR.""GroupId""=US.""GroupId"" "
+                    sSQL &= " LEFT JOIN """ & oCompanyDes.CompanyDB & """.""OUGR"" As D On D.""GroupName""=OUGR.""GroupName"" "
+                    sSQL &= " WHERE US.""UserId"" = " & sCodUsuarioOrigen & " and ifnull(D.""GroupId"",0)<>0; "
+                    If oObjGlobal.refDi.SQL.executeNonQuery(sSQL) <> True Then
+                        oObjGlobal.SBOApp.StatusBar.SetText("Error al actualizar los grupos del usuario " & oUser.UserCode & " - " & oUser.UserName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                        Exit Function
+                    End If
                 End If
+
+
+                'Actualizamos Permisos de usuario
+                sSQL = "DELETE FROM """ & oCompanyDes.CompanyDB & """.""USR3"" WHERE ""UserLink"" =" & sUsuarioDes
+                If oObjGlobal.refDi.SQL.executeNonQuery(sSQL) <> True Then
+                    oObjGlobal.SBOApp.StatusBar.SetText("Error al actualizar los permisos del usuario " & oUser.UserCode & " - " & oUser.UserName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                    Exit Function
+                Else
+                    sSQL = "INSERT INTO """ & oCompanyDes.CompanyDB & """.""USR3"" "
+                    sSQL &= "Select " & sUsuarioDes & ", ""PermId"", ""Permission"" "
+                    sSQL &= "FROM """ & oObjGlobal.compañia.CompanyDB & """.""USR3"" t0  "
+                    sSQL &= " WHERE t0.""UserLink"" = " & sCodUsuarioOrigen & "; "
+                    If oObjGlobal.refDi.SQL.executeNonQuery(sSQL) <> True Then
+                        oObjGlobal.SBOApp.StatusBar.SetText("Error al actualizar los permisos del usuario " & oUser.UserCode & " - " & oUser.UserName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                        Exit Function
+                    End If
+                End If
+
 
                 'Actualizamos datos del usuario
                 sSQL = "UPDATE """ & oCompanyDes.CompanyDB & """.""OUSR"" "
-                sSQL &= " SET ""MobileUser""=(SELECT ""MobileUser"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
-                sSQL &= " ""MobileIMEI""=(SELECT ""MobileIMEI"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
-                sSQL &= " ""CheckFiles""=(SELECT ""CheckFiles"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
-                sSQL &= " ""DsplyRates""=(SELECT ""DsplyRates"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
-                sSQL &= " ""RcrFlag""=(SELECT ""RcrFlag"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
-                sSQL &= " ""RclFlag""=(SELECT ""RclFlag"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
-                sSQL &= " ""ContactLog""=(SELECT ""ContactLog"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
-                sSQL &= " ""ShowNewMsg""=(SELECT ""ShowNewMsg"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
-                sSQL &= " ""OpenCdt""=(SELECT ""OpenCdt"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
-                sSQL &= " ""OpenDps""=(SELECT ""OpenDps"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
-                sSQL &= " ""ShowNewTsk""=(SELECT ""ShowNewTsk"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
-                sSQL &= " ""AlertPolFr""=(SELECT ""AlertPolFr"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
-                sSQL &= " ""ScreenLock""=(SELECT ""ScreenLock"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
-                sSQL &= " ""OpenCredit""=(SELECT ""OpenCredit"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
+                sSQL &= " Set ""MobileUser""=(Select ""MobileUser"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
+                sSQL &= " ""MobileIMEI""=(Select ""MobileIMEI"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
+                sSQL &= " ""CheckFiles""=(Select ""CheckFiles"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
+                sSQL &= " ""DsplyRates""=(Select ""DsplyRates"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
+                sSQL &= " ""RcrFlag""=(Select ""RcrFlag"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
+                sSQL &= " ""RclFlag""=(Select ""RclFlag"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
+                sSQL &= " ""ContactLog""=(Select ""ContactLog"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
+                sSQL &= " ""ShowNewMsg""=(Select ""ShowNewMsg"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
+                sSQL &= " ""OpenCdt""=(Select ""OpenCdt"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
+                sSQL &= " ""OpenDps""=(Select ""OpenDps"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
+                sSQL &= " ""ShowNewTsk""=(Select ""ShowNewTsk"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
+                sSQL &= " ""AlertPolFr""=(Select ""AlertPolFr"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
+                sSQL &= " ""ScreenLock""=(Select ""ScreenLock"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
+                sSQL &= " ""OpenCredit""=(Select ""OpenCredit"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
                 sSQL &= " ""PwdNeverEx""='Y' "
                 If bExiste = False Then
                     sSQL &= ", ""OneLogPwd""='Y' "
