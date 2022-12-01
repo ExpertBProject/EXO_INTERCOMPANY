@@ -2813,6 +2813,7 @@ Public Class EXO_GLOBALES
             oUser_Destino.MaxDiscountSales = oUser.MaxDiscountSales
             oUser_Destino.MobilePhoneNumber = oUser.MobilePhoneNumber
             oUser_Destino.Superuser = oUser.Superuser
+
             If bExiste = False Then
                 oUser_Destino.UserPassword = "Osma@2015"
             Else
@@ -2939,10 +2940,11 @@ Public Class EXO_GLOBALES
                 sSQL &= " ""AlertPolFr""=(Select ""AlertPolFr"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
                 sSQL &= " ""ScreenLock""=(Select ""ScreenLock"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
                 sSQL &= " ""OpenCredit""=(Select ""OpenCredit"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
+                sSQL &= " ""OneLogPwd""=(Select ""OneLogPwd"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
                 sSQL &= " ""PwdNeverEx""='Y' "
-                If bExiste = False Then
-                    sSQL &= ", ""OneLogPwd""='Y' "
-                End If
+                'If bExiste = False Then
+                '    sSQL &= ", ""OneLogPwd""='N' "
+                'End If
                 sSQL &= " WHERE ""USERID"" = " & sUsuarioDes & "; "
                 If oObjGlobal.refDi.SQL.executeNonQuery(sSQL) <> True Then
                     oObjGlobal.SBOApp.StatusBar.SetText("Error al actualizar Datos del usuario " & oUser.UserCode & " - " & oUser.UserName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
