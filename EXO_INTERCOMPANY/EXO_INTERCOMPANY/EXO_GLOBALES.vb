@@ -1,4 +1,5 @@
-﻿Imports SAPbouiCOM
+﻿Imports EXO_UIAPI
+Imports SAPbouiCOM
 
 Public Class EXO_GLOBALES
     Public Enum FuenteInformacion
@@ -769,32 +770,32 @@ Public Class EXO_GLOBALES
 #End Region
 #Region "Prioridad"
                 sPrioridad = CType(oOCRD.Priority, String)
-                    If sPrioridad <> "-1" Then
-                        oOBPP_Destino = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oBPPriorities), SAPbobsCOM.BPPriorities)
-                        sSQL = "SELECT * FROM OBPP WHERE ""PrioCode""='" & sPrioridad & "' "
-                        oRsPrioridad.DoQuery(sSQL)
-                        If oRsPrioridad.RecordCount > 0 Then
-                            If oOBPP_Destino.GetByKey(CType(sPrioridad, Integer)) = True Then
-                                oOBPP_Destino.PriorityDescription = oRsPrioridad.Fields.Item("PrioDesc").Value.ToString
-                                If oOBPP_Destino.Update() <> 0 Then
+                If sPrioridad <> "-1" Then
+                    oOBPP_Destino = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oBPPriorities), SAPbobsCOM.BPPriorities)
+                    sSQL = "SELECT * FROM OBPP WHERE ""PrioCode""='" & sPrioridad & "' "
+                    oRsPrioridad.DoQuery(sSQL)
+                    If oRsPrioridad.RecordCount > 0 Then
+                        If oOBPP_Destino.GetByKey(CType(sPrioridad, Integer)) = True Then
+                            oOBPP_Destino.PriorityDescription = oRsPrioridad.Fields.Item("PrioDesc").Value.ToString
+                            If oOBPP_Destino.Update() <> 0 Then
                                 oObjGlobal.SBOApp.StatusBar.SetText("Error Actualizando Prioridad para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " & oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                                 Exit Function
-                                Else
-                                    oCompanyDes.GetNewObjectCode(sPrioridad)
-                                End If
                             Else
-                                oOBPP_Destino.Priority = CType(sPrioridad, Integer)
-                                oOBPP_Destino.PriorityDescription = oRsPrioridad.Fields.Item("PrioDesc").Value.ToString
-                                If oOBPP_Destino.Add() <> 0 Then
+                                oCompanyDes.GetNewObjectCode(sPrioridad)
+                            End If
+                        Else
+                            oOBPP_Destino.Priority = CType(sPrioridad, Integer)
+                            oOBPP_Destino.PriorityDescription = oRsPrioridad.Fields.Item("PrioDesc").Value.ToString
+                            If oOBPP_Destino.Add() <> 0 Then
                                 oObjGlobal.SBOApp.StatusBar.SetText("Error Creando Prioridad para el IC " & sLicTradNum & " - " & oOCRD.CardName & " - " & oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                                 Exit Function
-                                Else
-                                    oCompanyDes.GetNewObjectCode(sPrioridad)
-                                End If
+                            Else
+                                oCompanyDes.GetNewObjectCode(sPrioridad)
                             End If
-                            oOCRD_Destino.Priority = CType(sPrioridad, Integer)
                         End If
+                        oOCRD_Destino.Priority = CType(sPrioridad, Integer)
                     End If
+                End If
 #End Region
                 oOCRD_Destino.IBAN = oOCRD.IBAN
 #Region "Vacaciones"
@@ -911,9 +912,9 @@ Public Class EXO_GLOBALES
                 oOCRD_Destino.VatGroup = oOCRD.VatGroup
 #End Region
 #Region "Pestaña propiedades"
-                    For i = 1 To 64
-                        oOCRD_Destino.Properties(i) = oOCRD.Properties(i)
-                    Next
+                For i = 1 To 64
+                    oOCRD_Destino.Properties(i) = oOCRD.Properties(i)
+                Next
 #End Region
                 oOCRD_Destino.FreeText = oOCRD.FreeText
 #Region "Documentos electrónicos"
@@ -995,6 +996,9 @@ Public Class EXO_GLOBALES
 #End Region
         End Try
     End Function
+
+
+
     Public Shared Function Comprueba_Proveedor_en_Master(ByRef oObjGlobal As EXO_UIAPI.EXO_UIAPI, ByVal sLicTradNum As String, ByVal sCardType As String, ByVal sSerie As String) As Boolean
         Comprueba_Proveedor_en_Master = False
 #Region "Variables"
@@ -2962,6 +2966,9 @@ Public Class EXO_GLOBALES
                     oObjGlobal.SBOApp.StatusBar.SetText("Error al actualizar Password del usuario " & oUser.UserCode & " - " & oUser.UserName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                     Exit Function
                 End If
+
+
+
             End If
             Sincroniza_User_Master = True
         Catch ex As Exception
@@ -2972,6 +2979,47 @@ Public Class EXO_GLOBALES
 #End Region
         End Try
     End Function
+
+    Friend Shared Function Sincroniza_User_Autoriz(objGlobal As EXO_UIAPI.EXO_UIAPI, sUSR As String, sPassUDF As String) As Boolean
+
+        Dim sSql As String = ""
+        Dim sExisteAutoriz As String = ""
+
+        Sincroniza_User_Autoriz = False
+
+        Try
+            sSql = "SELECT TOP 1 ""EXO_USUARIO""  FROM ""SOL_AUTORIZ"".""EXO_USUARIOS"" D WHERE D.""EXO_USUARIO"" = '" & sUSR & "'"
+            sExisteAutoriz = objGlobal.refDi.SQL.sqlStringB1(sSql)
+
+            If sExisteAutoriz <> "" Then
+                'campo de usuario 
+                'al terminar las bases de datos, actualizamos la web
+                sSql = "UPDATE D Set D.""EXO_PASSDB""='" + sPassUDF + "',D.""EXO_PASSWEB""='" + sPassUDF + "'
+                                FROM ""SOL_AUTORIZ"".""EXO_USUARIOS"" D
+                                WHERE D.""EXO_USUARIO"" = '" & sUSR & "'; "
+
+                If objGlobal.refDi.SQL.executeNonQuery(sSql) <> True Then
+                    objGlobal.SBOApp.StatusBar.SetText("Error al actualizar Password del usuario en la web de autorizaciones.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                    Exit Function
+                End If
+            Else
+                objGlobal.SBOApp.StatusBar.SetText("El usuario no existe en la web de aturoizaciones.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_None)
+                Exit Function
+                'aqui iria un inster
+                'se tiene que crear a mano, ya que puede ser que no tenga que entrar en las autorizaciones
+            End If
+
+            Sincroniza_User_Autoriz = False
+        Catch ex As Exception
+            Throw ex
+        Finally
+
+        End Try
+
+
+    End Function
+
+
     Public Shared Function Sincroniza_Etapa_Autorización_Master(ByRef oApprovalStage As SAPbobsCOM.ApprovalStage, ByRef oCompanyDes As SAPbobsCOM.Company, ByRef oObjGlobal As EXO_UIAPI.EXO_UIAPI) As Boolean
 #Region "Varibales"
         Dim bExiste As Boolean = False : Dim sExiste As String = ""

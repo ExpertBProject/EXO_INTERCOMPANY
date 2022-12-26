@@ -6,7 +6,24 @@ Public Class OUSR
     Public Sub New(ByRef oObjGlobal As EXO_UIAPI.EXO_UIAPI, ByRef actualizar As Boolean, usaLicencia As Boolean, idAddOn As Integer)
         MyBase.New(oObjGlobal, actualizar, False, idAddOn)
 
+        If actualizar Then
+            cargaCampos()
+        End If
     End Sub
+
+
+
+    Private Sub cargaCampos()
+        If objGlobal.refDi.comunes.esAdministrador Then
+            Dim oXML As String = ""
+            Dim udoObj As EXO_Generales.EXO_UDO = Nothing
+            oXML = objGlobal.funciones.leerEmbebido(Me.GetType(), "UDFs_OUSR.xml")
+            objGlobal.refDi.comunes.LoadBDFromXML(oXML)
+            objGlobal.SBOApp.StatusBar.SetText("Validado: UDFs_OUSR", SAPbouiCOM.BoMessageTime.bmt_Medium, SAPbouiCOM.BoStatusBarMessageType.smt_Success)
+        End If
+    End Sub
+
+
     Public Overrides Function filtros() As EventFilters
         Dim filtrosXML As Xml.XmlDocument = New Xml.XmlDocument
         filtrosXML.LoadXml(objGlobal.funciones.leerEmbebido(Me.GetType(), "XML_FILTROS_INTERCOMPANY.xml"))
@@ -81,12 +98,15 @@ Public Class OUSR
         End Try
     End Function
     Private Function Intercompany_After(ByRef oform As SAPbouiCOM.Form) As Boolean
+
         Dim sMensaje As String = ""
         Dim sBBDD As String = "" : Dim sBBDDDMaster As String = "" : Dim sUser As String = "" : Dim sPass As String = ""
         Dim sUSR As String = "" : Dim sUSRNAME As String = ""
         Dim sSQL As String = ""
+        Dim sPassUDF As String = ""
         Dim OdtEmpresas As System.Data.DataTable = Nothing : Dim oCompanyDes As SAPbobsCOM.Company = Nothing : Dim oCompanyMaster As SAPbobsCOM.Company = Nothing
         Dim oUser As SAPbobsCOM.Users = Nothing
+        Dim sExisteAutoriz As String = ""
         'Dim bHaSincronizado = False
         Intercompany_After = False
 
@@ -94,6 +114,9 @@ Public Class OUSR
             If (oform.Mode = BoFormMode.fm_ADD_MODE Or oform.Mode = BoFormMode.fm_UPDATE_MODE) Then
                 sUSR = oform.DataSources.DBDataSources.Item("OUSR").GetValue("USER_CODE", 0).ToString.Trim
                 sUSRNAME = oform.DataSources.DBDataSources.Item("OUSR").GetValue("U_NAME", 0).ToString.Trim
+
+                sPassUDF = oform.DataSources.DBDataSources.Item("OUSR").GetValue("U_EXO_PASS", 0).ToString.Trim
+
                 sBBDD = objGlobal.refDi.compañia.CompanyDB
                 sSQL = "SELECT TOP 1 ""U_EXO_BBDD"" FROM ""@EXO_IPANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_TIPO""='M' "
                 sBBDDDMaster = objGlobal.refDi.SQL.sqlStringB1(sSQL)
@@ -114,13 +137,13 @@ Public Class OUSR
                             For Each dr As DataRow In OdtEmpresas.Rows
                                 Try
                                     sBBDD = dr.Item("U_EXO_BBDD").ToString : sUser = dr.Item("U_EXO_USER").ToString : sPass = dr.Item("U_EXO_PASS").ToString
-                                    If sBBDD = "SEMA_PROD" Or sBBDD = "RANTI" Or sBBDD = "SIYCF" Then
-                                        objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & sBBDD & ". No se puede sincronizar Usuario: " & sUSR & " - " & sUSRNAME, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
-                                    Else
-                                        EXO_CONEXIONES.Connect_Company(oCompanyDes, objGlobal, sUser, sPass, sBBDD)
-                                        objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". Sincronizando Usuario: " & sUSR & " - " & sUSRNAME, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
-                                        EXO_GLOBALES.Sincroniza_User_Master(oUser, oCompanyDes, objGlobal)
-                                    End If
+                                    'If sBBDD = "SEMA_PROD" Or sBBDD = "RANTI" Or sBBDD = "SIYCF" Then
+                                    '    objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & sBBDD & ". No se puede sincronizar Usuario: " & sUSR & " - " & sUSRNAME, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                                    'Else
+                                    EXO_CONEXIONES.Connect_Company(oCompanyDes, objGlobal, sUser, sPass, sBBDD)
+                                    objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". Sincronizando Usuario: " & sUSR & " - " & sUSRNAME, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                                    EXO_GLOBALES.Sincroniza_User_Master(oUser, oCompanyDes, objGlobal)
+                                    'End If
                                 Catch ex As Exception
                                     objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". Error: " & ex.Message, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                                 Finally
@@ -132,8 +155,11 @@ Public Class OUSR
                                     End Try
                                 End Try
                             Next
+
+                            EXO_GLOBALES.Sincroniza_User_Autoriz(objGlobal, sUSR, sPassUDF)
+
                         Else
-                            objGlobal.SBOApp.StatusBar.SetText("No se ha encontrado el Usuario: " & sUSR & " - " & sUSRNAME & ". No se puede sincronizar.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                                objGlobal.SBOApp.StatusBar.SetText("No se ha encontrado el Usuario: " & sUSR & " - " & sUSRNAME & ". No se puede sincronizar.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                         End If
                     End If
                 End If
