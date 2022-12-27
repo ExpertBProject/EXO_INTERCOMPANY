@@ -2994,9 +2994,7 @@ Public Class EXO_GLOBALES
             If sExisteAutoriz <> "" Then
                 'campo de usuario 
                 'al terminar las bases de datos, actualizamos la web
-                sSql = "UPDATE D Set D.""EXO_PASSDB""='" + sPassUDF + "',D.""EXO_PASSWEB""='" + sPassUDF + "'
-                                FROM ""SOL_AUTORIZ"".""EXO_USUARIOS"" D
-                                WHERE D.""EXO_USUARIO"" = '" & sUSR & "'; "
+                sSql = "UPDATE D Set D.""EXO_PASSDB""='" + sPassUDF + "' FROM ""SOL_AUTORIZ"".""EXO_USUARIOS"" WHERE D.""EXO_USUARIO"" = '" & sUSR & "'; "
 
                 If objGlobal.refDi.SQL.executeNonQuery(sSql) <> True Then
                     objGlobal.SBOApp.StatusBar.SetText("Error al actualizar Password del usuario en la web de autorizaciones.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
