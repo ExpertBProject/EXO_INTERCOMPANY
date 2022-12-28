@@ -127,6 +127,7 @@
     <Compile Include="EXO_IIC.vb" />
     <Compile Include="EXO_IPANEL.vb" />
     <Compile Include="EXO_ONNM.vb" />
+    <Compile Include="EXO_OQCN.vb" />
     <Compile Include="EXO_OWST.vb" />
     <Compile Include="EXO_OWTM.vb" />
     <Compile Include="My Project\AssemblyInfo.vb" />
@@ -210,10 +211,11 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
   <PropertyGroup>
-    <PostBuildEvent>copy $(TargetPath) "E:\Desarrollo\Ficheros\Solaria\10.Dll_64\EXT\EXO_INTERCOMPANY.dll"
-copy  $(TargetPath) "E:\Desarrollo\Git\Manu\SOLARIA\EXO_KERNEL_9.1.1.0\x64\DLLs\EXO_INTERCOMPANY.dll"
-copy  $(TargetPath) "\\XPER-RDPDES01\Ficheros\SEMA_PROD\10.Dll_64\EXT\EXO_INTERCOMPANY.dll"
-copy  $(TargetPath) "\\XPER-WINWS02\ICO_Compartidas\AddOn\10.Dll_64\EXT\EXO_INTERCOMPANY.dll"</PostBuildEvent>
+    <PostBuildEvent>copy "$(TargetPath)" "E:\Desarrollo\Ficheros\Solaria\10.Dll_64\EXT\EXO_INTERCOMPANY.dll"
+copy "$(TargetPath)" "E:\Desarrollo\Git\Manu\SOLARIA\EXO_KERNEL_9.1.1.0\x64\DLLs\EXO_INTERCOMPANY.dll"
+copy "$(TargetPath)" "E:\Desarrollo\Cliente\9.1.1.0\x64\desarrollo\DLLs\EXO_INTERCOMPANY.dll"
+copy  "$(TargetPath)" "\\XPER-RDPDES01\Ficheros\SEMA_PROD\10.Dll_64\EXT\EXO_INTERCOMPANY.dll"
+copy  "$(TargetPath)" "\\XPER-WINWS02\ICO_Compartidas\AddOn\10.Dll_64\EXT\EXO_INTERCOMPANY.dll"</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

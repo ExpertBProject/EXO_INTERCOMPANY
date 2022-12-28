@@ -3385,5 +3385,135 @@ Public Class EXO_GLOBALES
             EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oUQDes, Object))
         End Try
     End Function
+
+    Public Shared Function CrearQuerysDesde_CAT_Master(ByVal sQueryCategoryOrigen As String, ByVal sQueryCategoryNameOrigen As String,
+            ByRef oCompanyDes As SAPbobsCOM.Company, ByRef oObjGlobal As EXO_UIAPI.EXO_UIAPI) As Boolean
+#Region "Variables"
+        Dim sboUserQueryCatOrigen As SAPbobsCOM.QueryCategories = Nothing : Dim sboUserQueryCatDes As SAPbobsCOM.QueryCategories = Nothing
+        Dim sSQL As String = ""
+        Dim sIDCatDes As String = "" : Dim sIDQueryDes As String = ""
+        Dim sError As String = ""
+        Dim iQueriIDOrigen As Integer = 0 : Dim sQueriIDDestino As String = ""
+        Dim oUQOrigen As SAPbobsCOM.UserQueries = Nothing : Dim oUQDes As SAPbobsCOM.UserQueries = Nothing
+        Dim oTQuerys As System.Data.DataTable = Nothing
+#End Region
+        Try
+            CrearQuerysDesde_CAT_Master = False
+#Region "Categoria de la Query"
+            'Buscamos si existe la categoría de la Query
+            sSQL = "SELECT ""CategoryId"" FROM """ & oCompanyDes.CompanyDB & """.""OQCN"" Where ""CatName""='" & sQueryCategoryNameOrigen & "' "
+            sIDCatDes = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+            'Creamos la categoría
+            If sIDCatDes = "" Then
+                sboUserQueryCatOrigen = CType(oObjGlobal.compañia.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oQueryCategories), SAPbobsCOM.QueryCategories)
+                If sboUserQueryCatOrigen.GetByKey(CType(sQueryCategoryOrigen, Integer)) = True Then
+                    sboUserQueryCatDes = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oQueryCategories), SAPbobsCOM.QueryCategories)
+                    With sboUserQueryCatDes
+                        .Name = sboUserQueryCatOrigen.Name
+                        .Permissions = sboUserQueryCatOrigen.Permissions
+                        If .Add() <> 0 Then
+                            sError = oCompanyDes.GetLastErrorCode.ToString & " / " & oCompanyDes.GetLastErrorDescription.Replace("'", "")
+                            oObjGlobal.SBOApp.StatusBar.SetText("(EXO) - " & sError, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                            Exit Function
+                        Else
+                            oCompanyDes.GetNewObjectCode(sIDCatDes)
+                        End If
+                    End With
+                Else
+                    oObjGlobal.SBOApp.StatusBar.SetText("Error inesperado. No se encuentra la categoría de la query: " & sQueryCategoryNameOrigen, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                    Return False
+                End If
+            Else
+                oObjGlobal.SBOApp.StatusBar.SetText("Se procede a actualizar la categoría query: " & sQueryCategoryNameOrigen, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                sboUserQueryCatOrigen = CType(oObjGlobal.compañia.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oQueryCategories), SAPbobsCOM.QueryCategories)
+                If sboUserQueryCatOrigen.GetByKey(CType(sQueryCategoryOrigen, Integer)) = True Then
+                    sboUserQueryCatDes = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oQueryCategories), SAPbobsCOM.QueryCategories)
+                    If sboUserQueryCatDes.GetByKey(CType(sIDCatDes, Integer)) = True Then
+                        With sboUserQueryCatDes
+                            .Name = sboUserQueryCatOrigen.Name
+                            .Permissions = sboUserQueryCatOrigen.Permissions
+                            If .Update() <> 0 Then
+                                sError = oCompanyDes.GetLastErrorCode.ToString & " / " & oCompanyDes.GetLastErrorDescription.Replace("'", "")
+                                oObjGlobal.SBOApp.StatusBar.SetText("(EXO) - " & sError, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                                Exit Function
+                            Else
+                                oCompanyDes.GetNewObjectCode(sIDCatDes)
+                            End If
+                        End With
+                    End If
+                Else
+                    oObjGlobal.SBOApp.StatusBar.SetText("Error inesperado. No se encuentra la categoría de la query: " & sQueryCategoryNameOrigen, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                    Return False
+                End If
+            End If
+#End Region
+#Region "Creación de la query"
+            oTQuerys = New System.Data.DataTable
+            oTQuerys.Clear()
+            sSQL = "SELECT ""IntrnalKey"",""QName"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUQR"" Where ""QCategory""='" & sQueryCategoryOrigen & "'"
+            oTQuerys = oObjGlobal.refDi.SQL.sqlComoDataTable(sSQL)
+            For Each dr As DataRow In oTQuerys.Rows
+                iQueriIDOrigen = CType(dr.Item("IntrnalKey").ToString, Integer)
+                oUQOrigen = Nothing
+                oUQOrigen = CType(oObjGlobal.compañia.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oUserQueries), SAPbobsCOM.UserQueries)
+                If oUQOrigen.GetByKey(iQueriIDOrigen, CType(sQueryCategoryOrigen, Integer)) = True Then
+                    oUQDes = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oUserQueries), SAPbobsCOM.UserQueries)
+                    'Buscamos si existe la Query
+                    sSQL = "Select ""IntrnalKey"" FROM """ & oCompanyDes.CompanyDB & """.""OUQR"" Where ""QCategory""='" & sIDCatDes & "' and ""QName""='" & oUQOrigen.QueryDescription & "' "
+                    sIDQueryDes = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                    If sIDQueryDes.Trim = "" Then
+                        oObjGlobal.SBOApp.StatusBar.SetText("Se procede a crear la query: " & iQueriIDOrigen, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                        oUQDes.ProcedureAlias = oUQOrigen.ProcedureAlias
+                        oUQDes.ProcedureName = oUQOrigen.ProcedureName
+                        oUQDes.Query = oUQOrigen.Query
+                        oUQDes.QueryCategory = CType(sIDCatDes, Integer)
+                        oUQDes.QueryDescription = oUQOrigen.QueryDescription
+                        oUQDes.QueryType = oUQOrigen.QueryType
+                        If oUQDes.Add() <> 0 Then
+                            sError = oCompanyDes.GetLastErrorCode.ToString & " / " & oCompanyDes.GetLastErrorDescription.Replace("'", "")
+                            oObjGlobal.SBOApp.StatusBar.SetText("(EXO) - " & sError, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                            Exit Function
+                        Else
+                            sQueriIDDestino = oCompanyDes.GetNewObjectKey()
+                        End If
+                    Else
+                        If oUQDes.GetByKey(CType(sIDQueryDes, Integer), CType(sIDCatDes, Integer)) = True Then
+                            oObjGlobal.SBOApp.StatusBar.SetText("Se procede a actualizar la query: " & iQueriIDOrigen, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                            oUQDes.ProcedureAlias = oUQOrigen.ProcedureAlias
+                            oUQDes.ProcedureName = oUQOrigen.ProcedureName
+                            oUQDes.Query = oUQOrigen.Query
+                            oUQDes.QueryCategory = CType(sIDCatDes, Integer)
+                            oUQDes.QueryDescription = oUQOrigen.QueryDescription
+                            oUQDes.QueryType = oUQOrigen.QueryType
+                            If oUQDes.Update() <> 0 Then
+                                sError = oCompanyDes.GetLastErrorCode.ToString & " / " & oCompanyDes.GetLastErrorDescription.Replace("'", "")
+                                oObjGlobal.SBOApp.StatusBar.SetText("(EXO) - " & sError, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                                Exit Function
+                            Else
+                                sQueriIDDestino = oCompanyDes.GetNewObjectKey()
+                            End If
+                        Else
+                            oObjGlobal.SBOApp.StatusBar.SetText("Error inesperado. No se encuentra la la query: " & oUQOrigen.QueryDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                            Return False
+                        End If
+                    End If
+
+                Else
+                    oObjGlobal.SBOApp.StatusBar.SetText("Error inesperado. No se encuentra la query Nº: " & iQueriIDOrigen, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                    Return False
+                End If
+            Next
+#End Region
+
+            CrearQuerysDesde_CAT_Master = True
+        Catch ex As Exception
+            Throw ex
+        Finally
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(sboUserQueryCatOrigen, Object))
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(sboUserQueryCatDes, Object))
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oUQOrigen, Object))
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oUQDes, Object))
+        End Try
+    End Function
 #End Region
 End Class
