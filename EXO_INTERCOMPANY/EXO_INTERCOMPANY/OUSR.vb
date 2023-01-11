@@ -156,6 +156,25 @@ Public Class OUSR
                                 End Try
                             Next
 
+                            Try
+                                sBBDD = "EMPRESA_CONSOLIDACION" : sUser = "manager" : sPass = "Sol@ri@123"
+
+                                EXO_CONEXIONES.Connect_Company(oCompanyDes, objGlobal, sUser, sPass, sBBDD)
+                                objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". Sincronizando Usuario: " & sUSR & " - " & sUSRNAME, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                                EXO_GLOBALES.Sincroniza_User_Master(oUser, oCompanyDes, objGlobal)
+
+                            Catch ex As Exception
+                                objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". Error: " & ex.Message, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                            Finally
+                                Try
+                                    objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". Fin Sincronización.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                                    EXO_CONEXIONES.Disconnect_Company(oCompanyDes)
+                                Catch ex As Exception
+
+                                End Try
+                            End Try
+
+
                             EXO_GLOBALES.Sincroniza_User_Autoriz(objGlobal, sUSR, sPassUDF)
 
                         Else
