@@ -475,6 +475,7 @@ Public Class EXO_GLOBALES
                     oOCRD_Destino.ContactEmployees.Position = oOCRD.ContactEmployees.Position
                     oOCRD_Destino.ContactEmployees.Remarks1 = oOCRD.ContactEmployees.Remarks1
                     oOCRD_Destino.ContactEmployees.Remarks2 = oOCRD.ContactEmployees.Remarks2
+                    oOCRD_Destino.ContactEmployees.EmailGroupCode = oOCRD.ContactEmployees.EmailGroupCode
                     oOCRD_Destino.ContactEmployees.Add()
                 Next
                 oOCRD_Destino.ContactPerson = oOCRD.ContactPerson
@@ -1350,6 +1351,7 @@ Public Class EXO_GLOBALES
                     oOCRD.ContactEmployees.Position = oOCRD_Master.ContactEmployees.Position
                     oOCRD.ContactEmployees.Remarks1 = oOCRD_Master.ContactEmployees.Remarks1
                     oOCRD.ContactEmployees.Remarks2 = oOCRD_Master.ContactEmployees.Remarks2
+                    oOCRD.ContactEmployees.EmailGroupCode = oOCRD_Master.ContactEmployees.EmailGroupCode
                     oOCRD.ContactEmployees.Add()
                 Next
                 oOCRD.ContactPerson = oOCRD_Master.ContactPerson
