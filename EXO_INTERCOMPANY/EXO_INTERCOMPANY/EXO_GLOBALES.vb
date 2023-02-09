@@ -142,6 +142,106 @@ Public Class EXO_GLOBALES
     End Function
 #End Region
 
+    Public Shared Function Sincroniza_Articulo_Master(ByRef oOITM As SAPbobsCOM.Items, ByRef oCompanyDes As SAPbobsCOM.Company, ByRef oObjGlobal As EXO_UIAPI.EXO_UIAPI) As Boolean
+#Region "Variables"
+        Dim oOITM_Destino As SAPbobsCOM.Items = Nothing
+        Dim sItemCode As String = ""
+        Dim sSQL As String = "" : Dim sSQL2 As String = "" : Dim oRs As SAPbobsCOM.Recordset = Nothing
+        Dim sExiste_art As Boolean = False
+
+#End Region
+
+        Sincroniza_Articulo_Master = False
+        Try
+            'Primero buscamos si existe el IC con el NIF
+            sItemCode = oOITM.ItemCode
+
+            oRs = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoRecordset), SAPbobsCOM.Recordset)
+            sSQL = "SELECT ""ItemCode"" FROM OITM WHERE ""ItemCode""='" & sItemCode & "'"
+            oRs.DoQuery(sSQL)
+            oOITM_Destino = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oItems), SAPbobsCOM.Items)
+            If oRs.RecordCount > 0 Then
+                sItemCode = oRs.Fields.Item("ItemCode").Value.ToString
+                If oOITM_Destino.GetByKey(sItemCode) = True And sItemCode <> "" Then
+                    oObjGlobal.SBOApp.StatusBar.SetText("Se procede a actualizar el Articulo " & oOITM.ItemCode, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                    sExiste_art = True
+                Else
+                    oObjGlobal.SBOApp.StatusBar.SetText("Se procede a crear el Articulo " & oOITM.ItemCode, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                    oOITM_Destino.ItemCode = oOITM.ItemCode
+                    sExiste_art = False
+                End If
+            Else
+                sExiste_art = False
+                'oObjGlobal.SBOApp.StatusBar.SetText("No se encuentra con CIF/NIF " & sLicTradNum & " el interlocutor " & oOCRD.CardName & ". Se procede a crearlo.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                'Buscamos la serie, ya que puede que tenga otro código
+                oObjGlobal.SBOApp.StatusBar.SetText("Se procede a crear el Articulo " & oOITM.ItemCode, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                oOITM_Destino.ItemCode = oOITM.ItemCode
+            End If
+
+            oObjGlobal.SBOApp.StatusBar.SetText(sExiste_art.ToString & " - " & sItemCode, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success) 'Necesario para que funcione NO QUITAR
+
+            oOITM_Destino.ItemName = oOITM.ItemName
+            oOITM_Destino.InventoryItem = oOITM.InventoryItem
+            oOITM_Destino.ManageBatchNumbers = oOITM.ManageBatchNumbers
+            oOITM_Destino.ManageSerialNumbers = oOITM.ManageSerialNumbers
+
+            ' oOCRD_Destino.Currency = oOCRD.Currency
+
+
+#Region "Pestaña propiedades"
+            For i = 1 To 64
+                oOITM_Destino.Properties(i) = oOITM.Properties(i)
+            Next
+#End Region
+
+#Region "Campos de usuario"
+            'sSQL = "select ""AliasID"" FROM """ & oCompanyDes.CompanyDB & """.""CUFD"" WHERE ""TableID"" = 'OCRD';"
+            'oRsCamposUsuario.DoQuery(sSQL)
+            'For i = 0 To oRsCamposUsuario.RecordCount - 1
+            '    Try
+            '        Dim sCampo As String = "U_" & oRsCamposUsuario.Fields.Item("AliasID").Value.ToString
+            '        oOCRD_Destino.UserFields.Fields.Item(sCampo).Value = oOCRD.UserFields.Fields.Item(sCampo).Value
+            '    Catch ex As Exception
+
+            '    End Try
+            '    oRsCamposUsuario.MoveNext()
+            'Next
+#End Region
+
+            If sExiste_art = False Then
+
+                If oOITM_Destino.Add() <> 0 Then
+                    oObjGlobal.SBOApp.StatusBar.SetText("Error Creando Articulo - " & sItemCode & " - " & oOITM.ItemName & " - " &
+                                                                        oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                Else
+                    oObjGlobal.SBOApp.StatusBar.SetText("Articulo Creado- " & sItemCode, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
+
+                End If
+
+
+            Else
+                If oOITM_Destino.Update() <> 0 Then
+                    oObjGlobal.SBOApp.StatusBar.SetText("Error actualizando Articulo - " & sItemCode & " - " & oOITM.ItemName & " - " &
+                                                                oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                Else
+                    oObjGlobal.SBOApp.StatusBar.SetText("Articulo Actualizado - " & sItemCode & " - " & oOITM.ItemName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
+                End If
+            End If
+
+            Sincroniza_Articulo_Master = True
+        Catch ex As Exception
+            Throw ex
+        Finally
+#Region "Liberar"
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oOITM_Destino, Object))
+            EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oRs, Object))
+
+            'EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oRsCamposUsuario, Object))
+#End Region
+        End Try
+    End Function
+
+
     Public Shared Function Sincroniza_proveedor_Master(ByRef oOCRD As SAPbobsCOM.BusinessPartners, ByRef oCompanyDes As SAPbobsCOM.Company, ByRef oObjGlobal As EXO_UIAPI.EXO_UIAPI, ByVal sSerie As String) As Boolean
 #Region "Variables"
         Dim oOCRD_Destino As SAPbobsCOM.BusinessPartners = Nothing
