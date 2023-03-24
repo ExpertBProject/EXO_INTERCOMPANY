@@ -114,8 +114,11 @@ Public Class OUSR
             If (oform.Mode = BoFormMode.fm_ADD_MODE Or oform.Mode = BoFormMode.fm_UPDATE_MODE) Then
                 sUSR = oform.DataSources.DBDataSources.Item("OUSR").GetValue("USER_CODE", 0).ToString.Trim
                 sUSRNAME = oform.DataSources.DBDataSources.Item("OUSR").GetValue("U_NAME", 0).ToString.Trim
+                Try
+                    sPassUDF = oform.DataSources.DBDataSources.Item("OUSR").GetValue("U_EXO_PASS", 0).ToString.Trim
+                Catch ex As Exception
 
-                sPassUDF = oform.DataSources.DBDataSources.Item("OUSR").GetValue("U_EXO_PASS", 0).ToString.Trim
+                End Try
 
                 sBBDD = objGlobal.refDi.compañia.CompanyDB
                 sSQL = "SELECT TOP 1 ""U_EXO_BBDD"" FROM ""@EXO_IPANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_TIPO""='M' "
@@ -164,7 +167,7 @@ Public Class OUSR
                                 EXO_GLOBALES.Sincroniza_User_Master(oUser, oCompanyDes, objGlobal)
 
                             Catch ex As Exception
-                                objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". Error: " & ex.Message, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                                objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & sBBDD & ". Error: " & ex.Message, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                             Finally
                                 Try
                                     objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". Fin Sincronización.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
