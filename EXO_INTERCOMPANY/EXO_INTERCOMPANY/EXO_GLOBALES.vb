@@ -3020,7 +3020,7 @@ Public Class EXO_GLOBALES
                     Exit Function
                 Else
                     sSQL = "INSERT INTO """ & oCompanyDes.CompanyDB & """.""USR3"" "
-                    sSQL &= "Select " & sUsuarioDes & ", ""PermId"", ""Permission"" "
+                    sSQL &= "Select " & sUsuarioDes & " ""UserLink"", ""PermId"", ""Permission"" "
                     sSQL &= "FROM """ & oObjGlobal.compañia.CompanyDB & """.""USR3"" t0  "
                     sSQL &= " WHERE t0.""UserLink"" = " & sCodUsuarioOrigen & "; "
                     If oObjGlobal.refDi.SQL.executeNonQuery(sSQL) <> True Then
