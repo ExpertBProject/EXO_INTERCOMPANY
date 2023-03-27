@@ -2902,7 +2902,7 @@ Public Class EXO_GLOBALES
                 bExiste = False
             End If
 
-
+            sUsuarioDes = oUser.UserCode
             oUser_Destino.UserCode = oUser.UserCode
             oUser_Destino.UserName = oUser.UserName
             oUser_Destino.LanguageCode = oUser.LanguageCode
@@ -2920,43 +2920,59 @@ Public Class EXO_GLOBALES
             oUser_Destino.MobilePhoneNumber = oUser.MobilePhoneNumber
             oUser_Destino.Superuser = oUser.Superuser
 
+            oObjGlobal.SBOApp.StatusBar.SetText("Actualizando Grupos al Usuario " & oUser.UserName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
             If bExiste = False Then
                 oUser_Destino.UserPassword = "Osma@2015"
             Else
-                'For i = 0 To oUser_Destino.UserGroupByUser.Count - 1
-                '    oUser_Destino.UserGroupByUser.SetCurrentLine(i)
-                '    oUser_Destino.UserGroupByUser.Delete()
-                'Next
+                For i = 0 To oUser_Destino.UserGroupByUser.Count - 1
+                    oUser_Destino.UserGroupByUser.SetCurrentLine(i)
+                    oUser_Destino.UserGroupByUser.Delete()
+                Next
             End If
-            'For i = 0 To oUser.UserGroupByUser.Count - 1
-            '    'oUser.UserGroupByUser.SetCurrentLine(i)
-            '    'oUser_Destino.UserGroupByUser.Add()
-            '    'oUser_Destino.UserGroupByUser.GroupId = oUser.UserGroupByUser.GroupId
-            '    'oUser_Destino.UserGroupByUser.DueDate = oUser.UserGroupByUser.DueDate
-            '    'oUser_Destino.UserGroupByUser.StartDate = oUser.UserGroupByUser.StartDate
 
-            'Next
+            For i = 0 To oUser.UserGroupByUser.Count - 1
+                oUser.UserGroupByUser.SetCurrentLine(i)
+                If oUser.UserGroupByUser.GroupId.ToString.Trim <> "0" Then
+                    'Necesitamos saber cual es el grupo en Destino
+                    'oUser_Destino.UserGroupByUser.GroupId = oUser.UserGroupByUser.GroupId
+                    sSQL = "SELECT ""GroupId"" FROM """ & oCompanyDes.CompanyDB & """.""OUGR"" WHERE ""GroupName""=(SELECT ""GroupName"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUGR"" WHERE ""GroupId""='" & oUser.UserGroupByUser.GroupId & "') "
+                    Dim IdGrupo As String = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                    If IdGrupo <> "" Then
+                        oUser_Destino.UserGroupByUser.GroupId = CInt(IdGrupo)
+                        oUser_Destino.UserGroupByUser.DueDate = oUser.UserGroupByUser.DueDate
+                        oUser_Destino.UserGroupByUser.StartDate = oUser.UserGroupByUser.StartDate
+                        oUser_Destino.UserGroupByUser.Add()
+                    Else
+                        oObjGlobal.SBOApp.StatusBar.SetText("No existe el grupo en el destino. No se le puede asignar. Revisarlos por favor.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                    End If
+                End If
+            Next
+
+            oObjGlobal.SBOApp.StatusBar.SetText("Actualizando permisos al Usuario " & oUser.UserName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
+
             'If oUser.Superuser = SAPbobsCOM.BoYesNoEnum.tNO Then
             '    For i = 0 To oUser.UserPermission.Count - 1
             '        Try
-            '            Dim bEncuentra As Boolean = False : Dim iFila As Integer = 0
-            '            oUser.UserPermission.SetCurrentLine(i)
-            '            For d = 0 To oUser_Destino.UserPermission.Count - 1
-            '                oUser_Destino.UserPermission.SetCurrentLine(d)
-            '                If oUser_Destino.UserPermission.PermissionID = oUser.UserPermission.PermissionID Then
-            '                    bEncuentra = True : iFila = d
-            '                    Exit For
-            '                End If
-            '            Next
-            '            If bEncuentra = True Then
-            '                oUser_Destino.UserPermission.SetCurrentLine(iFila)
-            '                oUser_Destino.UserPermission.PermissionID = oUser.UserPermission.PermissionID
-            '                oUser_Destino.UserPermission.Permission = oUser.UserPermission.Permission
-            '            Else
-            '                oUser_Destino.UserPermission.Add()
-            '                oUser_Destino.UserPermission.PermissionID = oUser.UserPermission.PermissionID
-            '                oUser_Destino.UserPermission.Permission = oUser.UserPermission.Permission
-            '            End If
+            '            '            '            Dim bEncuentra As Boolean = False
+            '            '            oUser.UserPermission.SetCurrentLine(i)
+            '            '            '            Try
+            '            '            '                oUser_Destino.UserPermission.SetCurrentLine(i)
+            '            '            '            Catch ex As Exception
+
+            '            '            '            End Try
+
+            '            '            '            If oUser_Destino.UserPermission.PermissionID = oUser.UserPermission.PermissionID Then
+            '            '            '                bEncuentra = True
+            '            '            '            End If
+
+            '            '            '            If bEncuentra = True Then
+            '            '            '                oUser_Destino.UserPermission.PermissionID = oUser.UserPermission.PermissionID
+            '            '            '                oUser_Destino.UserPermission.Permission = oUser.UserPermission.Permission
+            '            '            '            Else
+            '            oUser_Destino.UserPermission.PermissionID = oUser.UserPermission.PermissionID
+            '            oUser_Destino.UserPermission.Permission = oUser.UserPermission.Permission
+            '            oUser_Destino.UserPermission.Add()
+            '            '            '            End If
 
             '        Catch ex As Exception
             '            oObjGlobal.SBOApp.StatusBar.SetText("Asignando permisos - " & oUser.UserCode & " - " & oUser.UserName & " - " &
@@ -2964,9 +2980,6 @@ Public Class EXO_GLOBALES
             '        End Try
             '    Next
             'End If
-
-
-
 
             If bExiste = True Then
                 If oUser_Destino.Update() <> 0 Then
@@ -2986,47 +2999,24 @@ Public Class EXO_GLOBALES
                 End If
             End If
 
+
             If sUsuarioDes <> "" Then
-                'Actualizamos Grupos de usuario
-                sSQL = "DELETE FROM """ & oCompanyDes.CompanyDB & """.""USR7"" WHERE ""UserId"" =" & sUsuarioDes
-                If oObjGlobal.refDi.SQL.executeNonQuery(sSQL) <> True Then
-                    oObjGlobal.SBOApp.StatusBar.SetText("Error al actualizar los grupos del usuario " & oUser.UserCode & " - " & oUser.UserName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                    Exit Function
-                Else
-                    'sSQL = "INSERT INTO """ & oCompanyDes.CompanyDB & """.""OUGR"" "
-                    'sSQL &= " SELECT   OUGR.""GroupId"" , OUGR.""GroupName"" , OUGR.""GroupDec"" , OUGR.""Allowences"" , OUGR.""TPLId"", OUGR.""GroupType"", OUGR.""CockpitId""  "
-                    'sSQL &= " FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUGR"" AS OUGR "
-                    'sSQL &= " LEFT JOIN """ & oCompanyDes.CompanyDB & """.""OUGR"" AS D ON D.""GroupName""=OUGR.""GroupName"" "
-                    'sSQL &= " WHERE IFNULL(D.""GroupName"",0)<>0 "
-                    'oObjGlobal.refDi.SQL.executeNonQuery(sSQL)
-
-                    sSQL = "INSERT INTO """ & oCompanyDes.CompanyDB & """.""USR7"" "
-                    sSQL &= "Select " & sUsuarioDes & ", D.""GroupId"", US.""Category"", US.""StartDate"", US.""DueDate"" "
-                    sSQL &= "FROM """ & oObjGlobal.compañia.CompanyDB & """.""USR7"" US  "
-                    sSQL &= " INNER JOIN """ & oObjGlobal.compañia.CompanyDB & """.""OUGR"" AS OUGR ON OUGR.""GroupId""=US.""GroupId"" "
-                    sSQL &= " LEFT JOIN """ & oCompanyDes.CompanyDB & """.""OUGR"" As D On D.""GroupName""=OUGR.""GroupName"" "
-                    sSQL &= " WHERE US.""UserId"" = " & sCodUsuarioOrigen & " and ifnull(D.""GroupId"",0)<>0; "
-                    If oObjGlobal.refDi.SQL.executeNonQuery(sSQL) <> True Then
-                        oObjGlobal.SBOApp.StatusBar.SetText("Error al actualizar los grupos del usuario " & oUser.UserCode & " - " & oUser.UserName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                        Exit Function
-                    End If
-                End If
-
 
                 'Actualizamos Permisos de usuario
-                sSQL = "DELETE FROM """ & oCompanyDes.CompanyDB & """.""USR3"" WHERE ""UserLink"" =" & sUsuarioDes
-                If oObjGlobal.refDi.SQL.executeNonQuery(sSQL) <> True Then
-                    oObjGlobal.SBOApp.StatusBar.SetText("Error al actualizar los permisos del usuario " & oUser.UserCode & " - " & oUser.UserName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                    Exit Function
-                Else
-                    sSQL = "INSERT INTO """ & oCompanyDes.CompanyDB & """.""USR3"" "
-                    sSQL &= "Select " & sUsuarioDes & " ""UserLink"", ""PermId"", ""Permission"" "
-                    sSQL &= "FROM """ & oObjGlobal.compañia.CompanyDB & """.""USR3"" t0  "
-                    sSQL &= " WHERE t0.""UserLink"" = " & sCodUsuarioOrigen & "; "
-                    If oObjGlobal.refDi.SQL.executeNonQuery(sSQL) <> True Then
-                        oObjGlobal.SBOApp.StatusBar.SetText("Error al actualizar los permisos del usuario " & oUser.UserCode & " - " & oUser.UserName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                        Exit Function
-                    End If
+                If oUser.Superuser = SAPbobsCOM.BoYesNoEnum.tNO Then
+                    oObjGlobal.SBOApp.StatusBar.SetText("Actualizando permisos al Usuario " & oUser.UserName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
+                    For i = 0 To oUser.UserPermission.Count - 1
+                        Try
+                            oUser.UserPermission.SetCurrentLine(i)
+                            Dim bobi As SAPbobsCOM.SBObob = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoBridge), SAPbobsCOM.SBObob)
+
+                            bobi.SetSystemPermission(oUser.UserCode, oUser.UserPermission.PermissionID, oUser.UserPermission.Permission)
+
+                        Catch ex As Exception
+                            oObjGlobal.SBOApp.StatusBar.SetText("Asignando permisos - " & sUsuarioDes & " - " & oUser.UserName & " - " &
+                                                                   ex.Message, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                        End Try
+                    Next
                 End If
 
 
