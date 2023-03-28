@@ -2908,6 +2908,11 @@ Public Class EXO_GLOBALES
             oUser_Destino.LanguageCode = oUser.LanguageCode
 
             oUser_Destino.Branch = oUser.Branch
+            For i = 0 To oUser.UserBranchAssignment.Count - 1
+                oUser.UserBranchAssignment.SetCurrentLine(i)
+                If i > 0 Then oUser_Destino.UserPermission.Add()
+                oUser_Destino.UserBranchAssignment.BPLID = oUser.UserBranchAssignment.BPLID
+            Next
             oUser_Destino.CashLimit = oUser.CashLimit
             oUser_Destino.Defaults = oUser.Defaults
             oUser_Destino.Department = oUser.Department
@@ -2920,7 +2925,7 @@ Public Class EXO_GLOBALES
             oUser_Destino.MobilePhoneNumber = oUser.MobilePhoneNumber
             oUser_Destino.Superuser = oUser.Superuser
 
-            oObjGlobal.SBOApp.StatusBar.SetText("Actualizando Grupos al Usuario " & oUser.UserName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
+            oObjGlobal.SBOApp.StatusBar.SetText("Asignando Grupos... ", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
             If bExiste = False Then
                 oUser_Destino.UserPassword = "Osma@2015"
             Else
@@ -2948,37 +2953,20 @@ Public Class EXO_GLOBALES
                 End If
             Next
 
-            oObjGlobal.SBOApp.StatusBar.SetText("Actualizando permisos al Usuario " & oUser.UserName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
+            'oObjGlobal.SBOApp.StatusBar.SetText("Actualizando permisos al Usuario " & oUser.UserName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
 
             'If oUser.Superuser = SAPbobsCOM.BoYesNoEnum.tNO Then
-            '    For i = 0 To oUser.UserPermission.Count - 1
-            '        Try
-            '            '            '            Dim bEncuentra As Boolean = False
-            '            '            oUser.UserPermission.SetCurrentLine(i)
-            '            '            '            Try
-            '            '            '                oUser_Destino.UserPermission.SetCurrentLine(i)
-            '            '            '            Catch ex As Exception
-
-            '            '            '            End Try
-
-            '            '            '            If oUser_Destino.UserPermission.PermissionID = oUser.UserPermission.PermissionID Then
-            '            '            '                bEncuentra = True
-            '            '            '            End If
-
-            '            '            '            If bEncuentra = True Then
-            '            '            '                oUser_Destino.UserPermission.PermissionID = oUser.UserPermission.PermissionID
-            '            '            '                oUser_Destino.UserPermission.Permission = oUser.UserPermission.Permission
-            '            '            '            Else
-            '            oUser_Destino.UserPermission.PermissionID = oUser.UserPermission.PermissionID
+            '    Try
+            '        For i As Integer = 0 To oUser.UserPermission.Count - 1
+            '            oUser.UserPermission.SetCurrentLine(i)
+            '            If i > 0 Then oUser_Destino.UserPermission.Add()
             '            oUser_Destino.UserPermission.Permission = oUser.UserPermission.Permission
-            '            oUser_Destino.UserPermission.Add()
-            '            '            '            End If
-
-            '        Catch ex As Exception
-            '            oObjGlobal.SBOApp.StatusBar.SetText("Asignando permisos - " & oUser.UserCode & " - " & oUser.UserName & " - " &
-            '                                                       ex.Message, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
-            '        End Try
-            '    Next
+            '            oUser_Destino.UserPermission.PermissionID = oUser.UserPermission.PermissionID
+            '        Next
+            '    Catch ex As Exception
+            '        oObjGlobal.SBOApp.StatusBar.SetText("Asignando permisos - " & oUser.UserCode & " - " & oUser.UserName & " - " &
+            '                                                               ex.Message, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+            '    End Try
             'End If
 
             If bExiste = True Then
@@ -3001,6 +2989,33 @@ Public Class EXO_GLOBALES
 
 
             If sUsuarioDes <> "" Then
+                'oObjGlobal.SBOApp.StatusBar.SetText("Actualizando permisos al Usuario " & oUser.UserName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
+                'If oUser_Destino.GetByKey(CInt(sUsuarioDes)) = True Then
+                '    If oUser.Superuser = SAPbobsCOM.BoYesNoEnum.tNO Then
+                '        oUser_Destino = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oUsers), SAPbobsCOM.Users)
+                '        oUser_Destino.GetByKey(CInt(sUsuarioDes))
+                '        Try
+                '            For i As Integer = 0 To oUser.UserPermission.Count - 1
+                '                oUser.UserPermission.SetCurrentLine(i)
+
+
+                '                oUser_Destino.UserPermission.PermissionID = oUser.UserPermission.PermissionID
+                '                oUser_Destino.UserPermission.Permission = oUser.UserPermission.Permission
+                '                If i <> oUser.UserPermission.Count - 1 Then oUser_Destino.UserPermission.Add()
+                '            Next
+                '            If oUser_Destino.Update() <> 0 Then
+                '                oObjGlobal.SBOApp.StatusBar.SetText("Error actualizando permisos Usuario - " & oUser.UserCode & " - " & oUser.UserName & " - " &
+                '                                                oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                '            Else
+                '                oObjGlobal.SBOApp.StatusBar.SetText("Usuario Actualizado permisos - " & oUser.UserCode & " - " & oUser.UserName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
+                '                oCompanyDes.GetNewObjectCode(sUsuarioDes)
+                '            End If
+                '        Catch ex As Exception
+                '            oObjGlobal.SBOApp.StatusBar.SetText("Asignando permisos - " & oUser.UserCode & " - " & oUser.UserName & " - " &
+                '                                                                   ex.Message, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                '        End Try
+                '    End If
+                'End If
 
                 'Actualizamos Permisos de usuario
                 If oUser.Superuser = SAPbobsCOM.BoYesNoEnum.tNO Then
@@ -3018,7 +3033,6 @@ Public Class EXO_GLOBALES
                         End Try
                     Next
                 End If
-
 
                 'Actualizamos datos del usuario
                 sSQL = "UPDATE """ & oCompanyDes.CompanyDB & """.""OUSR"" "
