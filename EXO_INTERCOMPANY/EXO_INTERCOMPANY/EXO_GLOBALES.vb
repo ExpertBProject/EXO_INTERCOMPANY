@@ -3017,22 +3017,26 @@ Public Class EXO_GLOBALES
                 '    End If
                 'End If
 
-                'Actualizamos Permisos de usuario
-                If oUser.Superuser = SAPbobsCOM.BoYesNoEnum.tNO Then
-                    oObjGlobal.SBOApp.StatusBar.SetText("Actualizando permisos al Usuario " & oUser.UserName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
-                    For i = 0 To oUser.UserPermission.Count - 1
-                        Try
-                            oUser.UserPermission.SetCurrentLine(i)
-                            Dim bobi As SAPbobsCOM.SBObob = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoBridge), SAPbobsCOM.SBObob)
+                ''Actualizamos Permisos de usuario
 
-                            bobi.SetSystemPermission(oUser.UserCode, oUser.UserPermission.PermissionID, oUser.UserPermission.Permission)
+                '20230329 No se copian todos los permisos. Se decide hacerlo por el grupo que ya da permisos
+                ' Hablado con Tiara
 
-                        Catch ex As Exception
-                            oObjGlobal.SBOApp.StatusBar.SetText("Asignando permisos - " & sUsuarioDes & " - " & oUser.UserName & " - " &
-                                                                   ex.Message, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
-                        End Try
-                    Next
-                End If
+                'If oUser.Superuser = SAPbobsCOM.BoYesNoEnum.tNO Then
+                '    oObjGlobal.SBOApp.StatusBar.SetText("Actualizando permisos al Usuario " & oUser.UserName, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
+                '    For i = 0 To oUser.UserPermission.Count - 1
+                '        Try
+                '            oUser.UserPermission.SetCurrentLine(i)
+                '            Dim bobi As SAPbobsCOM.SBObob = CType(oCompanyDes.GetBusinessObject(SAPbobsCOM.BoObjectTypes.BoBridge), SAPbobsCOM.SBObob)
+
+                '            bobi.SetSystemPermission(oUser.UserCode, oUser.UserPermission.PermissionID, oUser.UserPermission.Permission)
+
+                '        Catch ex As Exception
+                '            oObjGlobal.SBOApp.StatusBar.SetText("Asignando permisos - " & sUsuarioDes & " - " & oUser.UserName & " - " &
+                '                                                   ex.Message, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                '        End Try
+                '    Next
+                'End If
 
                 'Actualizamos datos del usuario
                 sSQL = "UPDATE """ & oCompanyDes.CompanyDB & """.""OUSR"" "
