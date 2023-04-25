@@ -2907,12 +2907,14 @@ Public Class EXO_GLOBALES
             oUser_Destino.UserName = oUser.UserName
             oUser_Destino.LanguageCode = oUser.LanguageCode
 
-            oUser_Destino.Branch = oUser.Branch
+
             For i = 0 To oUser.UserBranchAssignment.Count - 1
                 oUser.UserBranchAssignment.SetCurrentLine(i)
                 If i > 0 Then oUser_Destino.UserPermission.Add()
                 oUser_Destino.UserBranchAssignment.BPLID = oUser.UserBranchAssignment.BPLID
             Next
+            oUser_Destino.Branch = oUser.Branch
+
             oUser_Destino.CashLimit = oUser.CashLimit
             oUser_Destino.Defaults = oUser.Defaults
             oUser_Destino.Department = oUser.Department
@@ -3330,11 +3332,11 @@ Public Class EXO_GLOBALES
                     For Each dr As DataRow In OdtDpto.Rows
                         sSQL = "INSERT INTO """ & oCompanyDes.CompanyDB & """.""@EXO_DPTO"" (""Code"", ""Name"") VALUES ('" & dr.Item("Code").ToString & " ', '" & dr.Item("Name").ToString & "')"
                         Dim bRes As Boolean = oObjGlobal.refDi.SQL.executeNonQuery(sSQL)
-                        If bRes = True Then
-                            oObjGlobal.SBOApp.StatusBar.SetText("Insertado Dpto: " & dr.Item("Code").ToString & " - " & dr.Item("Name").ToString, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
-                        Else
-                            oObjGlobal.SBOApp.StatusBar.SetText("No se ha podido insertar Dpto: " & dr.Item("Code").ToString & " - " & dr.Item("Name").ToString, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
-                        End If
+                        'If bRes = True Then
+                        '    oObjGlobal.SBOApp.StatusBar.SetText("Insertado Dpto: " & dr.Item("Code").ToString & " - " & dr.Item("Name").ToString, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
+                        'Else
+                        '    oObjGlobal.SBOApp.StatusBar.SetText("No se ha podido insertar Dpto: " & dr.Item("Code").ToString & " - " & dr.Item("Name").ToString, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                        'End If
                     Next
                 Else
                     oObjGlobal.SBOApp.StatusBar.SetText("No existen Dptos. para traspasar en el Intercompany", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
@@ -3353,7 +3355,7 @@ Public Class EXO_GLOBALES
                 If sQueriIDDestino.Trim <> "" Then
                     'Dim iEncuentra As Integer = InStr(sQueriIDDestino, vbTab)
                     'Dim sIDDestino As String = Left(sQueriIDDestino, iEncuentra).Trim
-                    oObjGlobal.SBOApp.StatusBar.SetText(sQueriIDDestino, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
+                    oObjGlobal.SBOApp.StatusBar.SetText("QueryDestino: " & sQueriIDDestino, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Success)
                     'oApprovalTemplateDes.ApprovalTemplateQueries.Add.QueryID = CType(sIDDestino.Trim, Integer)
                     ApprovalTemplateQueryDes = oApprovalTemplateDes.ApprovalTemplateQueries.Add
                     ApprovalTemplateQueryDes.QueryID = CType(sQueriIDDestino.Trim, Integer)
