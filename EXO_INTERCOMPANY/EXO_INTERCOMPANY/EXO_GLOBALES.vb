@@ -1098,8 +1098,6 @@ Public Class EXO_GLOBALES
         End Try
     End Function
 
-
-
     Public Shared Function Comprueba_Proveedor_en_Master(ByRef oObjGlobal As EXO_UIAPI.EXO_UIAPI, ByVal sLicTradNum As String, ByVal sCardType As String, ByVal sSerie As String) As Boolean
         Comprueba_Proveedor_en_Master = False
 #Region "Variables"
