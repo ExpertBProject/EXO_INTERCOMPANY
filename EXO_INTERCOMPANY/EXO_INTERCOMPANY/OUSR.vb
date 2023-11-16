@@ -8,10 +8,9 @@ Public Class OUSR
 
         If actualizar Then
             cargaCampos()
+            Crear_tabla_Log()
         End If
     End Sub
-
-
 
     Private Sub cargaCampos()
         If objGlobal.refDi.comunes.esAdministrador Then
@@ -19,11 +18,76 @@ Public Class OUSR
             Dim udoObj As EXO_Generales.EXO_UDO = Nothing
             oXML = objGlobal.funciones.leerEmbebido(Me.GetType(), "UDFs_OUSR.xml")
             objGlobal.refDi.comunes.LoadBDFromXML(oXML)
-            objGlobal.SBOApp.StatusBar.SetText("Validado: UDFs_OUSR", SAPbouiCOM.BoMessageTime.bmt_Medium, SAPbouiCOM.BoStatusBarMessageType.smt_Success)
+            objGlobal.SBOApp.StatusBar.SetText("Validado: UDFs_OUSR", SAPbouiCOM.BoMessageTime.bmt_Short, SAPbouiCOM.BoStatusBarMessageType.smt_Success)
         End If
     End Sub
 
+    Public Sub Crear_tabla_Log()
+        Dim sSQL As String = ""
+        Dim bResultado As Boolean = False
+        Dim sBBDD As String = "" : Dim sBBDDDMaster As String = ""
+        Try
+            If objGlobal.refDi.comunes.esAdministrador Then
+                sBBDD = objGlobal.refDi.compañia.CompanyDB
+                sSQL = "SELECT TOP 1 ""U_EXO_BBDD"" FROM """ & sBBDD & """.""@EXO_IPANELL"" WHERE ""Code""='INTERCOMPANY' and ""U_EXO_TIPO""='M' "
+                sBBDDDMaster = objGlobal.refDi.SQL.sqlStringB1(sSQL)
 
+                ' Si estamos en la master enviamos datos a los destinos
+                If sBBDD = sBBDDDMaster Then
+#Region "Crear Tabla LOG"
+                    sSQL = objGlobal.funciones.leerEmbebido(Me.GetType(), "CREATE_TABLE_LOG.sql")
+                    sSQL = sSQL.Replace("TABLE ", "TABLE """ & sBBDD & """.")
+                    bResultado = objGlobal.refDi.SQL.executeNonQuery(sSQL)
+
+                    If bResultado = True Then
+                        objGlobal.SBOApp.StatusBar.SetText("Creada Tabla EXO_LOG_INTERCOMPANY", SAPbouiCOM.BoMessageTime.bmt_Short, SAPbouiCOM.BoStatusBarMessageType.smt_Success)
+#Region "Creamos la consulta formateada"
+                        sSQL = ""
+                        Dim oOUQR As SAPbobsCOM.UserQueries = Nothing
+                        Dim oRs As SAPbobsCOM.Recordset = Nothing
+                        Dim sIntrnalKey As String = ""
+
+                        'Comprobamos si existe la consulta formateada dentro de la categoría General, que devuelve 
+                        'los errores de integración de estructuras/rutas/herramientas KTB
+                        sSQL = "SELECT t1.""IntrnalKey"" 
+                        FROM """ & sBBDD & """.""OUQR"" t1
+                        WHERE t1.""QCategory"" = -1 
+                        And t1.""QName"" = 'LOG INTERCOMPANY'"
+                        sIntrnalKey = objGlobal.refDi.SQL.sqlStringB1(sSQL)
+                        If sIntrnalKey = "" Then
+                            'Creamos la consulta formateada dentro de la categoría General, que devuelve 
+                            'los errores de integración de estructuras/rutas/herramientas KTB
+                            oOUQR = CType(objGlobal.compañia.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oUserQueries), SAPbobsCOM.UserQueries)
+
+                            sSQL = "SELECT t1.""DATEPROCESS"" ""Fecha proceso"", t1.""HORA"" ""HORA"", t1.""BBDD"" ""BBDD"", t1.""USUARIO"" ""USUARIO"", t1.""MODELO"" ""MODELO"", t1.""MESSAGE"" ""Mensaje"" 
+                                    FROM """ & sBBDD & """.""EXO_LOG_INTERCOMPANY"" t1"
+                            oOUQR.Query = sSQL
+                            oOUQR.QueryCategory = -1 'General
+                            oOUQR.QueryDescription = "LOG INTERCOMPANY"
+                            oOUQR.QueryType = SAPbobsCOM.UserQueryTypeEnum.uqtWizard
+
+                            If oOUQR.Add <> 0 Then
+                                Throw New Exception(objGlobal.compañia.GetLastErrorCode & " " & objGlobal.compañia.GetLastErrorDescription)
+                            Else
+                                objGlobal.SBOApp.StatusBar.SetText("Consulta formateada creada", SAPbouiCOM.BoMessageTime.bmt_Short, SAPbouiCOM.BoStatusBarMessageType.smt_Success)
+                            End If
+
+                            objGlobal.compañia.GetNewObjectCode(sIntrnalKey)
+                            sIntrnalKey = sIntrnalKey.Split(vbTab.ToCharArray)(0)
+                        End If
+#End Region
+                    Else
+                        objGlobal.SBOApp.StatusBar.SetText("Revisar si existe tabla EXO_LOG_INTERCOMPANY", SAPbouiCOM.BoMessageTime.bmt_Short, SAPbouiCOM.BoStatusBarMessageType.smt_Warning)
+                    End If
+#End Region
+                End If
+
+            End If
+
+        Catch ex As Exception
+            Throw ex
+        End Try
+    End Sub
     Public Overrides Function filtros() As EventFilters
         Dim filtrosXML As Xml.XmlDocument = New Xml.XmlDocument
         filtrosXML.LoadXml(objGlobal.funciones.leerEmbebido(Me.GetType(), "XML_FILTROS_INTERCOMPANY.xml"))
@@ -107,7 +171,7 @@ Public Class OUSR
         Dim OdtEmpresas As System.Data.DataTable = Nothing : Dim oCompanyDes As SAPbobsCOM.Company = Nothing : Dim oCompanyMaster As SAPbobsCOM.Company = Nothing
         Dim oUser As SAPbobsCOM.Users = Nothing
         Dim sExisteAutoriz As String = ""
-        'Dim bHaSincronizado = False
+        Dim bResultado = False
         Intercompany_After = False
 
         Try
@@ -137,6 +201,19 @@ Public Class OUSR
                         Dim sCodUSR As String = objGlobal.refDi.SQL.sqlStringB1(sSQL)
                         If oUser.GetByKey(CType(sCodUSR, Integer)) = True Then
                             objGlobal.SBOApp.StatusBar.SetText("Se va a proceder a recorrer las SOCIEDADES...", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+#Region "Control tabla LOG"
+#Region "Borrar EXO_LOG_INTERCOMPANY"
+                            sSQL = "DELETE FROM """ & sBBDD & """.""EXO_LOG_INTERCOMPANY"" "
+                            bResultado = objGlobal.refDi.SQL.executeNonQuery(sSQL)
+                            If bResultado = True Then
+                                objGlobal.SBOApp.StatusBar.SetText("Borrado todos los datos de la tabla ""EXO_LOG_INTERCOMPANY"".", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                            End If
+#End Region
+#Region "Crear Registro EXO_EDI_LOG"
+                            Dim sFecha As String = Now.Year.ToString("0000") & Now.Month.ToString("00") & Now.Day.ToString("00")
+                            EXO_GLOBALES.LogTabla(objGlobal.compañia, objGlobal, sFecha, objGlobal.compañia.CompanyDB, objGlobal.compañia.UserName, "", "#####                     INICIO LOG INTERCOMPANY                 #####", "INFO")
+#End Region
+#End Region
                             For Each dr As DataRow In OdtEmpresas.Rows
                                 Try
                                     sBBDD = dr.Item("U_EXO_BBDD").ToString : sUser = dr.Item("U_EXO_USER").ToString : sPass = dr.Item("U_EXO_PASS").ToString
@@ -149,6 +226,7 @@ Public Class OUSR
                                     'End If
                                 Catch ex As Exception
                                     objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". Error: " & ex.Message, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                                    EXO_GLOBALES.LogTabla(objGlobal.compañia, objGlobal, sFecha, sBBDD, sUSR, "", ex.Message, "ERROR")
                                 Finally
                                     Try
                                         objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". Fin Sincronización.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
@@ -170,6 +248,10 @@ Public Class OUSR
                                 objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & sBBDD & ". Error: " & ex.Message, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                             Finally
                                 Try
+#Region "Crear Registro EXO_EDI_LOG"
+                                    sFecha = Now.Year.ToString("0000") & Now.Month.ToString("00") & Now.Day.ToString("00")
+                                    EXO_GLOBALES.LogTabla(objGlobal.compañia, objGlobal, sFecha, objGlobal.compañia.CompanyDB, objGlobal.compañia.UserName, "", "#####                       FIN LOG INTERCOMPANY                   #####", "INFO")
+#End Region
                                     objGlobal.SBOApp.StatusBar.SetText("Sociedad: " & oCompanyDes.CompanyName & ". Fin Sincronización.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
                                     EXO_CONEXIONES.Disconnect_Company(oCompanyDes)
                                 Catch ex As Exception
@@ -181,7 +263,7 @@ Public Class OUSR
                             EXO_GLOBALES.Sincroniza_User_Autoriz(objGlobal, sUSR, sPassUDF)
 
                         Else
-                                objGlobal.SBOApp.StatusBar.SetText("No se ha encontrado el Usuario: " & sUSR & " - " & sUSRNAME & ". No se puede sincronizar.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+                            objGlobal.SBOApp.StatusBar.SetText("No se ha encontrado el Usuario: " & sUSR & " - " & sUSRNAME & ". No se puede sincronizar.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                         End If
                     End If
                 End If

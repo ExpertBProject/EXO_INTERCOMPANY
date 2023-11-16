@@ -90,6 +90,8 @@ Public Class EXO_OWTM
         Dim oApprovalTemplateService As SAPbobsCOM.ApprovalTemplatesService = Nothing
         Dim oApprovalTemplate As SAPbobsCOM.ApprovalTemplate = Nothing
         Dim oApprovalTemplateParams As SAPbobsCOM.ApprovalTemplateParams = Nothing
+        Dim bResultado As Boolean = False
+
         Intercompany_After = False
 
         Try
@@ -116,6 +118,19 @@ Public Class EXO_OWTM
 
                         If oApprovalTemplate.Name <> "" Then
                             objGlobal.SBOApp.StatusBar.SetText("Se va a proceder a recorrer las SOCIEDADES...", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+#Region "Control tabla LOG"
+#Region "Borrar EXO_LOG_INTERCOMPANY"
+                            sSQL = "DELETE FROM """ & sBBDD & """.""EXO_LOG_INTERCOMPANY"" "
+                            bResultado = objGlobal.refDi.SQL.executeNonQuery(sSQL)
+                            If bResultado = True Then
+                                objGlobal.SBOApp.StatusBar.SetText("Borrado todos los datos de la tabla ""EXO_LOG_INTERCOMPANY"".", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+                            End If
+#End Region
+#Region "Crear Registro EXO_EDI_LOG"
+                            Dim sFecha As String = Now.Year.ToString("0000") & Now.Month.ToString("00") & Now.Day.ToString("00")
+                            EXO_GLOBALES.LogTabla(objGlobal.compañia, objGlobal, sFecha, objGlobal.compañia.CompanyDB, objGlobal.compañia.UserName, "", "#####                     INICIO LOG INTERCOMPANY                 #####", "INFO")
+#End Region
+#End Region
                             For Each dr As DataRow In OdtEmpresas.Rows
                                 Try
                                     sBBDD = dr.Item("U_EXO_BBDD").ToString : sUser = dr.Item("U_EXO_USER").ToString : sPass = dr.Item("U_EXO_PASS").ToString
@@ -134,6 +149,10 @@ Public Class EXO_OWTM
 
                                 End Try
                             Next
+#Region "Crear Registro EXO_EDI_LOG"
+                            sFecha = Now.Year.ToString("0000") & Now.Month.ToString("00") & Now.Day.ToString("00")
+                            EXO_GLOBALES.LogTabla(objGlobal.compañia, objGlobal, sFecha, objGlobal.compañia.CompanyDB, objGlobal.compañia.UserName, "", "#####                       FIN LOG INTERCOMPANY                   #####", "INFO")
+#End Region
                         Else
                             objGlobal.SBOApp.StatusBar.SetText("No se ha encontrado el modelo de autorización: " & sModelo & " - " & sModeloName & ". No se puede sincronizar.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                         End If

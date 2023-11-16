@@ -206,6 +206,9 @@
   <ItemGroup>
     <EmbeddedResource Include="XML_BD\UDFs_OUSR.xml" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="SQL\CREATE_TABLE_LOG.sql" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
   <PropertyGroup>
     <PostBuildEvent>copy "$(TargetPath)" "E:\Desarrollo\Ficheros\Solaria\10.Dll_64\EXT\EXO_INTERCOMPANY.dll"

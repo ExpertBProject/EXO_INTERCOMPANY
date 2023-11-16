@@ -2978,9 +2978,19 @@ Public Class EXO_GLOBALES
                     sUsuarioDes = ""
                     oObjGlobal.SBOApp.StatusBar.SetText("Error actualizando Usuario - " & oUser.UserCode & " - " & oUser.UserName & " - " &
                                                                 oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+#Region "Crear Registro EXO_EDI_LOG"
+                    Dim sFecha As String = Now.Year.ToString("0000") & Now.Month.ToString("00") & Now.Day.ToString("00")
+                    EXO_GLOBALES.LogTabla(oObjGlobal.compañia, oObjGlobal, sFecha, oCompanyDes.CompanyDB, oUser.UserCode, "", "Error actualizando Usuario - " & oUser.UserCode & " - " & oUser.UserName & " - " &
+                                                                oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, "ERROR")
+#End Region
+
 #Region "En caso de error, está corrompido, por lo que se desactiva el usuario "
                     If oCompanyDes.GetLastErrorDescription.ToLower.Contains("error interno") Then
                         oObjGlobal.SBOApp.StatusBar.SetText("Desactivamos Usuario - " & oUser.UserCode & " - " & oUser.UserName & ".", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+#Region "Crear Registro EXO_EDI_LOG"
+                        sFecha = Now.Year.ToString("0000") & Now.Month.ToString("00") & Now.Day.ToString("00")
+                        EXO_GLOBALES.LogTabla(oObjGlobal.compañia, oObjGlobal, sFecha, oCompanyDes.CompanyDB, oUser.UserCode, "", "Desactivamos Usuario - " & oUser.UserCode & " - " & oUser.UserName & ".", "WARNING")
+#End Region
                         sSQL = "UPDATE """ & oCompanyDes.CompanyDB & """.""OUSR""
                                 SET ""GROUPS""=99, ""USER_CODE""='Z" & oUser.UserCode & "'
                             WHERE ""USERID"" = " & sCodUSR & ""
@@ -2995,6 +3005,11 @@ Public Class EXO_GLOBALES
             Else
                 If oUser_Destino.Add() <> 0 Then
                     sUsuarioDes = ""
+#Region "Crear Registro EXO_EDI_LOG"
+                    Dim sFecha As String = Now.Year.ToString("0000") & Now.Month.ToString("00") & Now.Day.ToString("00")
+                    EXO_GLOBALES.LogTabla(oObjGlobal.compañia, oObjGlobal, sFecha, oCompanyDes.CompanyDB, oUser.UserCode, "", "Error creando Usuario - " & oUser.UserCode & " - " & oUser.UserName & " - " &
+                                                                oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, "ERROR")
+#End Region
                     oObjGlobal.SBOApp.StatusBar.SetText("Error creando Usuario - " & oUser.UserCode & " - " & oUser.UserName & " - " &
                                                                 oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
                 Else
@@ -3069,7 +3084,7 @@ Public Class EXO_GLOBALES
                     Exit Function
                 End If
             Else
-                objGlobal.SBOApp.StatusBar.SetText("El usuario no existe en la web de aturoizaciones.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_None)
+                objGlobal.SBOApp.StatusBar.SetText("El usuario no existe en la web de autorizaciones.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_None)
                 Exit Function
                 'aqui iria un inster
                 'se tiene que crear a mano, ya que puede ser que no tenga que entrar en las autorizaciones
@@ -3216,6 +3231,12 @@ Public Class EXO_GLOBALES
                 iUsuarioDes = CType(oObjGlobal.refDi.SQL.sqlNumericaB1(sSQL), Integer)
                 If iUsuarioDes = 0 Then
                     oObjGlobal.SBOApp.StatusBar.SetText("No existe el usuario " & sUsuarioNameOrigen.ToString & ". Por favor, revise los datos.", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+#Region "Crear Registro EXO_EDI_LOG"
+                    Dim sFecha As String = Now.Year.ToString("0000") & Now.Month.ToString("00") & Now.Day.ToString("00")
+                    sSQL = "SELECT ""USER_CODE"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR""  WHERE  ""USERID""=" & iUsuarioOrigen
+                    sUsuarioNameOrigen = oObjGlobal.refDi.SQL.sqlStringB1(sSQL)
+                    EXO_GLOBALES.LogTabla(oObjGlobal.compañia, oObjGlobal, sFecha, oCompanyDes.CompanyDB, iUsuarioOrigen.ToString & " - " & sUsuarioNameOrigen, oApprovalTemplate.Name, "No existe el usuario " & sUsuarioNameOrigen.ToString & " en la empresa origen. Por favor, revise los datos.", "ERROR")
+#End Region
                     Exit Function
                 End If
                 oApprovalTemplateDes.ApprovalTemplateUsers.Add.UserID = iUsuarioDes
@@ -3583,5 +3604,24 @@ Public Class EXO_GLOBALES
             EXO_CleanCOM.CLiberaCOM.liberaCOM(CType(oUQDes, Object))
         End Try
     End Function
+#End Region
+#Region "Escribir el tabla LOG"
+    Public Shared Sub LogTabla(ByRef oCompany As SAPbobsCOM.Company, ByRef oObjGlobal As EXO_UIAPI.EXO_UIAPI,
+                               ByVal sFecha As String, ByVal sBBDD As String, ByVal sUS As String, ByVal MODELO As String,
+                               ByVal sMessage As String, ByVal sTipo As String)
+        Dim sSQL As String = ""
+        Dim bResultado As Boolean = False
+        Try
+            sSQL = "insert into """ & oCompany.CompanyDB & """.""EXO_LOG_INTERCOMPANY""
+                        values('" & sFecha & "','" & Now.Hour.ToString("00") & ":" & Now.Minute.ToString("00") & "', '" & sBBDD & "','" & sUS & "','" & MODELO & "','" & sTipo & "','" & sMessage & "')"
+            bResultado = oObjGlobal.refDi.SQL.executeNonQuery(sSQL)
+            If bResultado = False Then
+                oObjGlobal.SBOApp.StatusBar.SetText("False en Query: " & sSQL, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+            End If
+
+        Catch ex As Exception
+            oObjGlobal.SBOApp.StatusBar.SetText("Error al grabar el tabla LOG_INTERCOMPANY: " & ex.Message, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
+        End Try
+    End Sub
 #End Region
 End Class
