@@ -2880,6 +2880,7 @@ Public Class EXO_GLOBALES
         Dim bExiste As Boolean = False
         Dim sSQL As String = ""
         Dim sUsuarioDes As String = "" : Dim sCodUsuarioOrigen As String = ""
+        Dim tbModelos As System.Data.DataTable = Nothing
 #End Region
         Sincroniza_User_Master = False
         Try
@@ -2983,19 +2984,57 @@ Public Class EXO_GLOBALES
                     EXO_GLOBALES.LogTabla(oObjGlobal.compañia, oObjGlobal, sFecha, oCompanyDes.CompanyDB, oUser.UserCode, "", "Error actualizando Usuario - " & oUser.UserCode & " - " & oUser.UserName & " - " &
                                                                 oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, "ERROR")
 #End Region
+                    If oCompanyDes.GetLastErrorDescription.Contains("Existen procesos de autorización") Then
+#Region "Registro LOG_INTERCOMPANY de modelos"
+
+                        tbModelos = New System.Data.DataTable("Modelos")
+                        tbModelos.Clear()
+
+                        sSQL = "Select T1.""WtmCode"", T1.""Name"", T1.""Remarks"", T3.""USERID"", T3.""USER_CODE"", ""U_NAME"" 
+                                    FROM  """ & oCompanyDes.CompanyDB & """.""WTM1"" T0  
+                                    INNER Join  """ & oCompanyDes.CompanyDB & """.""OWTM"" T1 ON T0.""WtmCode"" = T1.""WtmCode""
+                                    INNER Join  """ & oCompanyDes.CompanyDB & """.""OUSR"" T3 ON T3.""USERID"" = T0.""UserID""
+                                    WHERE T3.""USER_CODE""=" & oUser.UserCode
+                        tbModelos = oObjGlobal.refDi.SQL.sqlComoDataTable(sSQL)
+                        For Each Row As DataRow In tbModelos.Rows
+#Region "Crear Registro LOG_INTERCOMPANY"
+                            sFecha = Now.Year.ToString("0000") & Now.Month.ToString("00") & Now.Day.ToString("00")
+                            EXO_GLOBALES.LogTabla(oObjGlobal.compañia, oObjGlobal, sFecha, oCompanyDes.CompanyDB, oUser.UserCode, "", "Revisar proceso de autorización: " & Row.Item("WtmCode").ToString & " - " & Row.Item("Name").ToString & " - " & Row.Item("Remarks").ToString, "WARNING")
+#End Region
+                        Next
+#End Region
+                    End If
+
 
 #Region "En caso de error, está corrompido, por lo que se desactiva el usuario "
                     If oCompanyDes.GetLastErrorDescription.ToLower.Contains("error interno") Then
-                        oObjGlobal.SBOApp.StatusBar.SetText("Desactivamos Usuario - " & oUser.UserCode & " - " & oUser.UserName & ".", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
-#Region "Crear Registro EXO_EDI_LOG"
+                        oObjGlobal.SBOApp.StatusBar.SetText("Desactivamos Usuario y creamos el nuevo usuario - " & oUser.UserCode & " - " & oUser.UserName & ".", BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Warning)
+#Region "Crear Registro LOG_INTERCOMPANY"
                         sFecha = Now.Year.ToString("0000") & Now.Month.ToString("00") & Now.Day.ToString("00")
-                        EXO_GLOBALES.LogTabla(oObjGlobal.compañia, oObjGlobal, sFecha, oCompanyDes.CompanyDB, oUser.UserCode, "", "Desactivamos Usuario - " & oUser.UserCode & " - " & oUser.UserName & ".", "WARNING")
+                        EXO_GLOBALES.LogTabla(oObjGlobal.compañia, oObjGlobal, sFecha, oCompanyDes.CompanyDB, oUser.UserCode, "", "Desactivamos Usuario y creamos el nuevo usuario - " & oUser.UserCode & " - " & oUser.UserName & ".", "WARNING")
 #End Region
                         sSQL = "UPDATE """ & oCompanyDes.CompanyDB & """.""OUSR""
                                 SET ""GROUPS""=99, ""USER_CODE""='Z" & oUser.UserCode & "'
                             WHERE ""USERID"" = " & sCodUSR & ""
                         oObjGlobal.refDi.SQL.executeNonQuery(sSQL)
                         Sincroniza_User_Master(oUser, oCompanyDes, oObjGlobal)
+#Region "Registro LOG_INTERCOMPANY de modelos"
+                        tbModelos = New System.Data.DataTable("Modelos")
+                        tbModelos.Clear()
+
+                        sSQL = "Select T1.""WtmCode"", T1.""Name"", T1.""Remarks"", T3.""USERID"", T3.""USER_CODE"", ""U_NAME"" 
+                                    FROM  """ & oCompanyDes.CompanyDB & """.""WTM1"" T0  
+                                    INNER Join  """ & oCompanyDes.CompanyDB & """.""OWTM"" T1 ON T0.""WtmCode"" = T1.""WtmCode""
+                                    INNER Join  """ & oCompanyDes.CompanyDB & """.""OUSR"" T3 ON T3.""USERID"" = T0.""UserID""
+                                    WHERE T3.""USERID""=" & sCodUSR
+                        tbModelos = oObjGlobal.refDi.SQL.sqlComoDataTable(sSQL)
+                        For Each Row As DataRow In tbModelos.Rows
+#Region "Crear Registro LOG_INTERCOMPANY"
+                            sFecha = Now.Year.ToString("0000") & Now.Month.ToString("00") & Now.Day.ToString("00")
+                            EXO_GLOBALES.LogTabla(oObjGlobal.compañia, oObjGlobal, sFecha, oCompanyDes.CompanyDB, oUser.UserCode, "", "Actualizar Modelo de autorización: " & Row.Item("WtmCode").ToString & " - " & Row.Item("Name").ToString & " - " & Row.Item("Remarks").ToString, "WARNING")
+#End Region
+                        Next
+#End Region
                     End If
 #End Region
                 Else
@@ -3008,7 +3047,7 @@ Public Class EXO_GLOBALES
 #Region "Crear Registro EXO_EDI_LOG"
                     Dim sFecha As String = Now.Year.ToString("0000") & Now.Month.ToString("00") & Now.Day.ToString("00")
                     EXO_GLOBALES.LogTabla(oObjGlobal.compañia, oObjGlobal, sFecha, oCompanyDes.CompanyDB, oUser.UserCode, "", "Error creando Usuario - " & oUser.UserCode & " - " & oUser.UserName & " - " &
-                                                                oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, "ERROR")
+                                                                oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, "Error")
 #End Region
                     oObjGlobal.SBOApp.StatusBar.SetText("Error creando Usuario - " & oUser.UserCode & " - " & oUser.UserName & " - " &
                                                                 oCompanyDes.GetLastErrorCode & " / " & oCompanyDes.GetLastErrorDescription, BoMessageTime.bmt_Short, BoStatusBarMessageType.smt_Error)
@@ -3023,7 +3062,7 @@ Public Class EXO_GLOBALES
                 sSQL = "UPDATE """ & oCompanyDes.CompanyDB & """.""OUSR"" "
                 sSQL &= " Set ""MobileUser""=(Select ""MobileUser"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""GROUPS""=0 And t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
                 sSQL &= " ""MobileIMEI""=(Select ""MobileIMEI"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""GROUPS""=0 And t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
-                sSQL &= " ""CheckFiles""=(Select ""CheckFiles"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""GROUPS""=0 And t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
+                sSQL &= " ""CheckFiles""= (Select ""CheckFiles"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""GROUPS""=0 And t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
                 sSQL &= " ""DsplyRates""=(Select ""DsplyRates"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""GROUPS""=0 And t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
                 sSQL &= " ""RcrFlag""=(Select ""RcrFlag"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""GROUPS""=0 And t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
                 sSQL &= " ""RclFlag""=(Select ""RclFlag"" FROM """ & oObjGlobal.compañia.CompanyDB & """.""OUSR"" t0  WHERE t0.""GROUPS""=0 And t0.""USERID"" =" & sCodUsuarioOrigen & " ), "
@@ -3344,6 +3383,12 @@ Public Class EXO_GLOBALES
             oApprovalTemplateParamsDes = oApprovalTemplateServiceDes.AddApprovalTemplate(oApprovalTemplateDes)
             Sincroniza_Modelo_Autorización_Master = True
         Catch ex As Exception
+            If ex.Message.Contains("Existen procesos de autorización") Then
+
+                Dim sFecha As String = Now.Year.ToString("0000") & Now.Month.ToString("00") & Now.Day.ToString("00")
+                EXO_GLOBALES.LogTabla(oObjGlobal.compañia, oObjGlobal, sFecha, oCompanyDes.CompanyDB, "", oApprovalTemplate.Name.ToString, "Revisar proceso de autorización " & oApprovalTemplate.Name.ToString, "WARNING")
+
+            End If
             Throw ex
         Finally
 #Region "Liberar"
